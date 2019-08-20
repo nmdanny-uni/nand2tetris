@@ -1,0 +1,18 @@
+bartsimp, lisasimp
+===============================================================================
+Bart Simpson, ID 011111111, bart@cs.huji.ac.il
+Lisa Simpson, ID 022222222, lisa@cs.huji.ac.il
+===============================================================================
+
+                           Project X - An HDL File
+                           ----------------------- 
+  
+
+Submitted Files
+---------------
+README - This file.
+Derives.hdl - The Derives chip.
+
+Remarks
+-------
+* The chip was actually implemented by simply using an Or chip. cool!
