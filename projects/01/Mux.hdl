@@ -3,10 +3,17 @@
 // by Nisan and Schocken, MIT Press.
 // File name: projects/01/Mux.hdl
 
-/** 
+/**
  * Multiplexor:
  * out = a if sel == 0
  *       b otherwise
+ *     = (sel and b) or (notSel and a)
+ *
+ * We'll try expressing it via NANDs, knowing the output will be fed via a nand
+ * out = NAND(x,y) = notX or notY
+ * thus, notX = (sel and b), notY = (notSel and a)
+ * thus, x = (sel nand b), y = (notSel nand a)
+ * thus, with 3 NANDS + 1 NOT = 4 NANDs we get the required
  */
 
 CHIP Mux {
@@ -14,5 +21,8 @@ CHIP Mux {
     OUT out;
 
     PARTS:
-    // Put your code here:
+    Not(in=sel, out=notSel);
+    Nand(a=sel, b=b, out=x);
+    Nand(a=notSel, b=a, out=y);
+    Nand(a=x, b=y, out=out);
 }
