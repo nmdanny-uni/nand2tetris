@@ -6,12 +6,36 @@
 /**
  * Exclusive-or gate:
  * out = not (a == b)
+ *     = (a and notB) or (b and notA)  (DNF form)
+ *
+ * clearly this is more than 4 NANDs. Note that the output must be emitted from a NAND gate,
+ * that is, there exists 'x' and 'y' such that the following part exists:
+ * Nand(a=x, b=y, out=out)
+ * algebrically, we get:
+ * out = x nand y
+ * However, the following identity exists: x nand y = notX or notY, so by plugging to the DNF form,
+ * we get:
+ * notX = a and notB => x = not(a and notB) = a nand notB = notA or b
+ * notY = b and notA => y = not(b and notA) = b nand notA = notB or A
+ * basically, we get:
+ * out = (a nand notB) nand (b nand notA).
+ * This isn't enough, we'll need 3 NANDs + 2 NOTs = 5 NANDs.
+ *
+ * Note the symmetry between both sides. Since we've used 1 nand in the center, we have a total of 3 nands
+ * remaining for 2 sides, this means there'll be a shared NAND.
+ * Well, we can guess that there's a gate that is fed both a and b, thus (a nand b) = (notA or notB)
+ * we can note that the output of this gate can be fed to each side, indeed, we get:
+ * (a nand notB) = (notA or notB) nand a
+ * (b nand notA) = (notA or notB) nand b
  */
 
 CHIP Xor {
     IN a, b;
     OUT out;
 
-    PARTS:
-    // Put your code here:
+  PARTS:
+  Nand(a=a, b=b, out=notAorNotB);
+  Nand(a=notAorNotB, b=a, out=x);
+  Nand(a=notAorNotB, b=b, out=y);
+  Nand(a=x, b=y, out=out);
 }

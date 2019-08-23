@@ -4,9 +4,10 @@
 // File name: projects/01/And.hdl
 
 /**
- * And gate: 
+ * And gate:
  * out = 1 if (a == 1 and b == 1)
  *       0 otherwise
+ * Impl uses 2 NAND gates(since Not takes 1)
  */
 
 CHIP And {
@@ -14,5 +15,6 @@ CHIP And {
     OUT out;
 
     PARTS:
-    // Put your code here:
+    Nand(a=a, b=b, out=aNandB);
+    Not(in=aNandB, out=out);
 }
