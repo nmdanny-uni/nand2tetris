@@ -5,13 +5,23 @@
 
 /**
  * Computes the sum of two bits.
+ * The trivial implementation would've used And(for carry) and Xor(for sum), using 6 NANDs.
+ * But we can note that one gates in the 'And' (a nand b) already occurs within 'Xor',
+ * thereby we can reuse it, resulting in 5 gates!
+ *
  */
 
 CHIP HalfAdder {
     IN a, b;    // 1-bit inputs
-    OUT sum,    // Right bit of a + b 
+    OUT sum,    // Right bit of a + b
         carry;  // Left bit of a + b
 
     PARTS:
-    // Put you code here:
+    /* xor unpacked */
+    Nand(a=a, b=b, out=aNandB); // we reuse this in and
+    Nand(a=aNandB, b=a, out=x);
+    Nand(a=aNandB, b=b, out=y);
+    Nand(a=x, b=y, out=sum);
+    /* and */
+    Not(in=aNandB, out=carry); // NOT = 1 NAND
 }
