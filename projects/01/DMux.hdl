@@ -7,6 +7,24 @@
  * Demultiplexor:
  * {a, b} = {in, 0} if sel == 0
  *          {0, in} if sel == 1
+ * b = sel and in = not(sel nand in)  (this can be expressed with 1 NAND and 1 OR, equivalent to 2 NANDs)
+ * a = notSel and in = not(notSel nand in)
+ * the trick here is that for 'a', instead of using 'notSel'(requring an extra NOT/NAND),
+ * we can re-use the previously occuring NAND gate, (se nand in), and indeed, if we compare the
+ * required truth table for 'a':
+ * in | sel | a  (required)
+ *  0    0     0
+ *  1    0     1
+ *  0    1     0
+ *  1    1     0
+
+ * and what we can make with the previous nand:
+ * in | sel | sel nand in | (sel nand in) nand in
+ *  0    0    1                1
+ *  1    0    1                0
+ *  0    1    1                1
+ *  1    1    0                1
+ * negating the above indeed gives us the truth table for 'a' as required.
  */
 
 CHIP DMux {
@@ -14,5 +32,8 @@ CHIP DMux {
     OUT a, b;
 
     PARTS:
-    // Put your code here:
+    Nand(a=sel, b=in, out=selNandIn);
+    Not(in=selNandIn, out=b);
+    Nand(a=selNandIn, b=in, out=selNandInNandIn);
+    Not(in=selNandInNandIn, out=a);
 }
