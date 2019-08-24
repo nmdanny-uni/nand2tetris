@@ -1,0 +1,36 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Project 1 - Implementation of various chips
+                           ----------------------- 
+  
+
+Submitted Files
+---------------
+├── README - This file
+├── And16.hdl
+├── And.hdl
+├── DMux4Way.hdl
+├── DMux8Way.hdl
+├── DMux.hdl
+├── Mux16.hdl
+├── Mux4Way16.hdl
+├── Mux8Way16.hdl
+├── Mux.hdl
+├── Not16.hdl
+├── Not.hdl
+├── Or16.hdl
+├── Or8Way.hdl
+├── Or.hdl
+├── Xor.hdl
+
+(No helper chips were needed)
+
+Remarks
+-------
+* The normal variants use the minimal number of NAND gates as described in the moodle. I don't know
+  how many are required for multi-bit/multi-way gates, so I don't know if my impls are ptimal,
+  but I tried to re-use previous gates as much as possible.
+* Some of the trickier chips have explanation in the README on the intuition behind them
