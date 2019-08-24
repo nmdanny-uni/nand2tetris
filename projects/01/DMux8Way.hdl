@@ -9,6 +9,9 @@
  *                            {0, in, 0, 0, 0, 0, 0, 0} if sel == 001
  *                            etc.
  *                            {0, 0, 0, 0, 0, 0, 0, in} if sel == 111
+ * First, depending on the 3rd bit(MSB), we're either in 'abcd' or 'efgh'.
+ * this selection can be done with a DMux.
+ * Then, just like with the 4 way DMux, we forward those signals forward.
  */
 
 CHIP DMux8Way {
@@ -16,5 +19,7 @@ CHIP DMux8Way {
     OUT a, b, c, d, e, f, g, h;
 
     PARTS:
-    // Put your code here:
+    DMux(in=in, sel=sel[2], a=abcd, b=efgh);
+    DMux4Way(in=abcd, sel=sel[0..1], a=a, b=b, c=c, d=d);
+    DMux4Way(in=efgh, sel=sel[0..1], a=e, b=f, c=g, d=h);
 }

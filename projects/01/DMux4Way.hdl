@@ -9,6 +9,13 @@
  *                {0, in, 0, 0} if sel == 01
  *                {0, 0, in, 0} if sel == 10
  *                {0, 0, 0, in} if sel == 11
+ * We can think of this as follows:
+ * First, depending on the 2nd(MSB) bit, we'll either forward the in
+ * signal to 'a/b' (if bit is 0), or to 'c/d'(if bit is 1). This forward is done with
+ * a DMux.
+ * Then, based on the first bit(LSB), we further determine between a,b and c,d.
+ * We do this with two DMuxes, only one of those will have a non-0 in, so the other won't
+ * matter.
  */
 
 CHIP DMux4Way {
@@ -16,5 +23,8 @@ CHIP DMux4Way {
     OUT a, b, c, d;
 
     PARTS:
-    // Put your code here:
+    DMux(in=in, sel=sel[1], a=ab, b=cd);
+    DMux(in=ab, sel=sel[0], a=a, b=b);
+    DMux(in=cd, sel=sel[0], a=c, b=d);
+
 }
