@@ -5,6 +5,19 @@
 
 /**
  * Computes the sum of three bits.
+ * Immediately, the right bit of a+b+c can be obtained via halfadders
+ * (b+c) then (a+(b+c)). The remaining thing to take care of, is the carrys.
+ * lets look at the possibiilities:
+ *  - it's impossible for both carrys to be 1, since that'd mean that a+b=2, and 2+c=2 or 4.
+      obviously, it can't be 4, since c is no more than 1, and if it's 2, that means c=0,
+      (third case), and in particular we'd have a 0 carry, in contradiction.
+    - both carries are 0, iff we added (0+0+0), (1+0+0) or a permutation of one of these additions,
+      thus the result is 00 or 01 in binary (left bit/carry is 0)
+    - if only one carry is 1, this means we added (1+1+0) or some permutation, so the result is
+      2 (11 in binary), that is, left bit/carry of 1.
+    Thus, the result of the final carry corresponds to an Or of the intermediate carrys.
+
+    In total we used 2 HalfAdders(2*5 NANDs) + 1 Or(3 NANDs) = 13 NANDs.
  */
 
 CHIP FullAdder {
@@ -14,4 +27,7 @@ CHIP FullAdder {
 
     PARTS:
     // Put you code here:
+    HalfAdder(a=b, b=c, sum=bPlusC, carry=c1);
+    HalfAdder(a=a, b=bPlusC, sum=sum, carry=c2);
+    Or(a=c1, b=c2, out=carry);
 }
