@@ -1,0 +1,35 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Project 2 - Implementation of ALU and some extra chips
+                           ----------------------- 
+  
+
+Submitted Files
+
+- README - This file
+- Identity.hdl - Helper chip
+- FullAdder.hdl
+- HalfAdder.hdl
+- Add16.hdl
+- Inc16.hdl
+- ALU.hdl
+- ShiftLeft.hdl - Extra requirement from 2018/19 course(TODO: is it still relevant in 2020?)
+- ShiftRight.hdl - Extra requirement
+- Mul.hdl - Extra requirement
+
+Remarks
+-------
+== Identity Helper Chip ==
+The 'Identity' chip(used within the Shift gates) is used due to the inability to connect internal
+pins directly to output pins, I think this is a limitation of HDL and thus this gate can be easily
+optimized in real life, which would make Half/FullAdders use only 1 NAND (for the LSB/MSB which are
+treated differently).
+
+== ALU optimization ==
+It may have been possible to further optimize the ALU, especially several usages of Muxes.
+However, Muxes are an elegant way of expressing conditionals, and unlike more elementary chips,
+I believe that CPUs have very few ALUs inside them, thus the gains from optimizing this specific
+chip are fairly small relative to chips such as adders, shifts and so on...
