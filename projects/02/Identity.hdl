@@ -1,0 +1,14 @@
+/** Identity chip, out=in
+  * This is used in 'LeftShift', because we can't connect output and input pins directly.
+  * Technically uses 2 NANDs (double NOT), but if we had the ability to connect out and in pins
+  * directly, this would've used 0 NANDs.
+  */
+CHIP Identity {
+     IN in;
+     OUT out;
+     
+     PARTS:
+     Not(in=in, out=notIn);
+     Not(in=notIn, out=out);
+
+}

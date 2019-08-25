@@ -1,7 +1,35 @@
+/** out = in * 2
+  * This is done by shifting all bits to the left.
+  * Basically, the 0th output pin is 0, out[1] equals in[0], out[2] equals in[1] and so on...
+  * Pretty simple, but HDL doesn't let us connect input pins to output pins directly, therefore
+  * we need to use double NOTs to get the effect of an "Identity" gate.(See Identity.hdl)
+  * Moreover, we need to set out[0] to be 0.* Again, we cannot set it directly, but by
+  * using a NOT and feeding it true input, and forwarding the false out to out[0].
+  *
+  * Identity gate uses 2 NOTs(=NANDs), therefore we use a total of 15*2 + 1 = 31 NANDs
+  * Again, this is due to a limitation of HDL, if we had the ability to connect in/out pins directly
+  * and feed a constant signal to a pin, this would've been achievable with 0 gates.
+  o
+  * * We set the LSB to 0, because every number multiplied by 2 becomes even.
+  */
 CHIP ShiftLeft{
      IN in[16];
      OUT out[16];
-     
      PARTS:
-
+     Not(in=true, out=out[0]);
+     Identity(in=in[0], out=out[1]);
+     Identity(in=in[1], out=out[2]);
+     Identity(in=in[2], out=out[3]);
+     Identity(in=in[3], out=out[4]);
+     Identity(in=in[4], out=out[5]);
+     Identity(in=in[5], out=out[6]);
+     Identity(in=in[6], out=out[7]);
+     Identity(in=in[7], out=out[8]);
+     Identity(in=in[8], out=out[9]);
+     Identity(in=in[9], out=out[10]);
+     Identity(in=in[10], out=out[11]);
+     Identity(in=in[11], out=out[12]);
+     Identity(in=in[12], out=out[13]);
+     Identity(in=in[13], out=out[14]);
+     Identity(in=in[14], out=out[15]);
 }

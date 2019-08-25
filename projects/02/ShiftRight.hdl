@@ -1,7 +1,31 @@
+/** Performs division by 2, by shifting bits to the right.
+  * Similar idea as with left-shift, this takes 32 NANDs but could've taken 0 gates
+  * if we had the ability to connect pins directly.
+  *
+  * Note: the output MSB equals the input MSB, because the shift preserves the sign, and
+  * in twos-complement, zeroing a previously 1 MSB, would turn a negative number into a positive,
+  * which isn't what we want to do here. (In other words: the MSB is the sign bit, and must be preserved)
+  */
 CHIP ShiftRight{
      IN in[16];
      OUT out[16];
-     
+
      PARTS:
+     Identity(in=in[15], out=out[15]); // right-shift always fills MSB with input MSB.
+     Identity(in=in[15], out=out[14]);
+     Identity(in=in[14], out=out[13]);
+     Identity(in=in[13], out=out[12]);
+     Identity(in=in[12], out=out[11]);
+     Identity(in=in[11], out=out[10]);
+     Identity(in=in[10], out=out[09]);
+     Identity(in=in[09], out=out[08]);
+     Identity(in=in[08], out=out[07]);
+     Identity(in=in[07], out=out[06]);
+     Identity(in=in[06], out=out[05]);
+     Identity(in=in[05], out=out[04]);
+     Identity(in=in[04], out=out[03]);
+     Identity(in=in[03], out=out[02]);
+     Identity(in=in[02], out=out[01]);
+     Identity(in=in[01], out=out[00]);
 
 }
