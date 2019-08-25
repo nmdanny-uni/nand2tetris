@@ -42,5 +42,34 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-   // Put you code here:
+    // handling x pre-ops: possibly zero x, then possibly negate x, outputting 'xHandled'
+    Mux16(a=x, b=false, sel=zx, out=xAfterZero);
+    Not16(in=xAfterZero, out=negXafterZero);
+    Mux16(a=xAfterZero, b=negXafterZero, sel=nx, out=xHandled);
+
+    // handling y pre-ops: possibly zero y, then possibly negate x, outputting 'xHandled'
+    Mux16(a=y, b=false, sel=zy, out=yAfterZero);
+    Not16(in=yAfterZero, out=negYafterZero);
+    Mux16(a=yAfterZero, b=negYafterZero, sel=ny, out=yHandled);
+
+    // both possible 'f' computations using the handled 'x' and 'y' variables
+    Add16(a=xHandled, b=yHandled, out=aPlusB);
+    And16(a=xHandled, b=yHandled, out=aAndB);
+
+    // the chosen computation is piped to 'fOut'
+    Mux16(a=aAndB, b=aPlusB, sel=f, out= fOut);
+    Not16(in=fOut, out=notFout);
+    // either we pipe that directly to 'out', or we pipe a negation of that result
+    // We also split the out signal to various sizes needed
+    Mux16(a=fOut, b= notFout, sel= no, out=out,
+          out[15]=outMSB, out[0..7]=outFirstHalf, out[8..15]=outSecondHalf);
+
+    // the output is zero IFF the 'or' of all bits is 1
+    Or8Way(in=outFirstHalf, out=o1);
+    Or8Way(in=outSecondHalf, out=o2);
+    Or(a=o1, b=o2, out=allDigitsAre0);
+    Not(in=allDigitsAre0, out=zr);
+
+    // The output is negative IFF the last bit(sign bit) is 1
+    And(a=outMSB, b=true, out=ng);
 }
