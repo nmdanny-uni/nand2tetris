@@ -8,6 +8,10 @@
  * stored at the memory location specified by address. If load==1, then 
  * the in value is loaded into the memory location specified by address 
  * (the loaded value will be emitted to out from the next time step onward).
+
+ * Similar idea to RAM512 implementation, now using bits [0..1] to choose a chip,
+ * and fanning out bits [2..13] as addresses to all chips.
+ * (Now we have a choice of 4 instead of 8)
  */
 
 CHIP RAM16K {
@@ -15,5 +19,12 @@ CHIP RAM16K {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    RAM4K(in=in, load=loadRam1, out=outRam1, address=address[2..13]);
+    RAM4K(in=in, load=loadRam2, out=outRam2, address=address[2..13]);
+    RAM4K(in=in, load=loadRam3, out=outRam3, address=address[2..13]);
+    RAM4K(in=in, load=loadRam4, out=outRam4, address=address[2..13]);
+    Mux4Way16(a=outRam1, b=outRam2, c=outRam3, d=outRam4,
+              sel=address[0..1], out=out);
+    DMux4Way(in=load, sel=address[0..1],
+             a=loadRam1, b=loadRam2, c=loadRam3, d=loadRam4);
 }
