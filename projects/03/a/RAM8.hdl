@@ -8,6 +8,17 @@
  * stored at the memory location specified by address. If load==1, then 
  * the in value is loaded into the memory location specified by address 
  * (the loaded value will be emitted to out from the next time step onward).
+ *
+ * Basically, I fan out* 'in' to all Registers, and the tricky part is deciding to which register
+ * we should use(in passing the load, and piping its output to the RAM output)
+ * A 8 way mux is exactly what we need to combine the outputs of the registers, and forward
+ * the correct one(using the address as a selector) to the output
+ * Similarly, a 8 way DMux is what we need to use the selector(address) to pipe the load signal
+ * to the correct register out of 8 possibilities.
+
+ *   *Intuitively, there's no purpose in forwarding the in signal to all registers, this is
+       an optimization, as it's much cheaper than using a DMux to pipe it to the correct address,
+       and registers ignore the 'in' signal when the load bit isn't set.
  */
 
 CHIP RAM8 {
@@ -15,5 +26,18 @@ CHIP RAM8 {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    Register(in=in, load=loadReg1, out=outReg1);
+    Register(in=in, load=loadReg2, out=outReg2);
+    Register(in=in, load=loadReg3, out=outReg3);
+    Register(in=in, load=loadReg4, out=outReg4);
+    Register(in=in, load=loadReg5, out=outReg5);
+    Register(in=in, load=loadReg6, out=outReg6);
+    Register(in=in, load=loadReg7, out=outReg7);
+    Register(in=in, load=loadReg8, out=outReg8);
+    Mux8Way16(a=outReg1, b=outReg2, c=outReg3, d=outReg4,
+              e=outReg5, f=outReg6, g=outReg7, h=outReg8,
+              sel=address, out=out);
+    DMux8Way(in=load, sel=address,
+             a=loadReg1, b=loadReg2, c=loadReg3, d=loadReg4,
+             e=loadReg5, f=loadReg6, g=loadReg7, h=loadReg8);
 }

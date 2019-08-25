@@ -7,6 +7,10 @@
  * 1-bit register:
  * If load[t] == 1 then out[t+1] = in[t]
  *                 else out does not change (out[t+1] = out[t])
+ * The idea of this chip is as follows:
+ * We use mux to decide whether to update the DFF(by passing it the 'in' signal, possibly different
+ * from the stored bit), or to "not update it"(by updating it with the already existing value in the
+   DFF, its output - which effectively doesn't change the stored bit)
  */
 
 CHIP Bit {
@@ -14,5 +18,6 @@ CHIP Bit {
     OUT out;
 
     PARTS:
-    // Put your code here:
+    DFF(in=muxOut, out=out, out=dffOut);
+    Mux(a=dffOut, b=in, sel=load, out=muxOut);
 }
