@@ -9,12 +9,29 @@
  * else if (load[t] == 1)  out[t+1] = in[t]
  * else if (inc[t] == 1)   out[t+1] = out[t] + 1  (integer addition)
  * else                    out[t+1] = out[t]
+ *
+ * The concept here is smilar to our Bit implementation, but now with 4 operations.
+ * We could've used something like a Mux4Way16, however that takes a 2-bit number, rather than 3 individual bits,
+ * and manually encoding those bits into 2-bit numbers is both wasteful(requiring extra gates) and harder to
+ * implement. Therefore, I used several Mux16 gates instead - allowing me to explicitly the if/else flow by
+ * chaining them together.
+
+ * Minor inefficiency note: The Muxes within the Register's bits are useless, since we always use load=true
+ * Replacing it with 16 DFFs would've saved us 16 Muxes, I chose not to because I am lazy, but this is
+ * a trivial change... TODO stop being lazy
+
+
  */
 
 CHIP PC {
     IN in[16],load,inc,reset;
     OUT out[16];
 
-    PARTS:
-    // Put your code here:
+  PARTS:
+
+  Register(in=finalMuxOut, out=out, out=regOut, load=true);
+  Inc16(in=regOut, out=incremented);
+  Mux16(a=regOut, b=incremented, sel=inc, out=processedInc);
+  Mux16(a=processedInc, b=in, sel=load, out=processedLoad);
+  Mux16(a=processedLoad, b=false, sel=reset, out=finalMuxOut);
 }
