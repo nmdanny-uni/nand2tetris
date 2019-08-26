@@ -10,8 +10,8 @@
  * (the loaded value will be emitted to out from the next time step onward).
 
  * The concept in the impl here is similar to RAM8, but handling the address is trickier:
- * the first 3 bits will be used to decide which RAM we're talknig about(2^3=8 options), the rest of
- * the bits will be forwarded to the appropriate RAM.
+ * As detailed in the book, the 3 MSB bits are used to select a ram chip(since we have 2^3=8 options),
+ * the 3 LSB bits are used as addresses within the RAM8 itself(choosing a register)
  *
  * So, we'll fan out the in signal and the [0..2] address bits to ALL chips, and use
  * a Mux/DMux setup(similar to RAM8) to forward the load signal to the appropriate chip, and the
@@ -23,18 +23,18 @@ CHIP RAM64 {
     OUT out[16];
 
     PARTS:
-    RAM8(in=in, load=loadRam1, out=outRam1, address=address[3..5]);
-    RAM8(in=in, load=loadRam2, out=outRam2, address=address[3..5]);
-    RAM8(in=in, load=loadRam3, out=outRam3, address=address[3..5]);
-    RAM8(in=in, load=loadRam4, out=outRam4, address=address[3..5]);
-    RAM8(in=in, load=loadRam5, out=outRam5, address=address[3..5]);
-    RAM8(in=in, load=loadRam6, out=outRam6, address=address[3..5]);
-    RAM8(in=in, load=loadRam7, out=outRam7, address=address[3..5]);
-    RAM8(in=in, load=loadRam8, out=outRam8, address=address[3..5]);
+    RAM8(in=in, load=loadRam1, out=outRam1, address=address[0..2]);
+    RAM8(in=in, load=loadRam2, out=outRam2, address=address[0..2]);
+    RAM8(in=in, load=loadRam3, out=outRam3, address=address[0..2]);
+    RAM8(in=in, load=loadRam4, out=outRam4, address=address[0..2]);
+    RAM8(in=in, load=loadRam5, out=outRam5, address=address[0..2]);
+    RAM8(in=in, load=loadRam6, out=outRam6, address=address[0..2]);
+    RAM8(in=in, load=loadRam7, out=outRam7, address=address[0..2]);
+    RAM8(in=in, load=loadRam8, out=outRam8, address=address[0..2]);
     Mux8Way16(a=outRam1, b=outRam2, c=outRam3, d=outRam4,
               e=outRam5, f=outRam6, g=outRam7, h=outRam8,
-              sel=address[0..2], out=out);
-    DMux8Way(in=load, sel=address[0..2],
+              sel=address[3..5], out=out);
+    DMux8Way(in=load, sel=address[3..5],
              a=loadRam1, b=loadRam2, c=loadRam3, d=loadRam4,
              e=loadRam5, f=loadRam6, g=loadRam7, h=loadRam8);
 }

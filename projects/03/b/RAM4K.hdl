@@ -9,8 +9,8 @@
  * the in value is loaded into the memory location specified by address 
  * (the loaded value will be emitted to out from the next time step onward).
 
- * Similar idea to RAM512 implementation, now using bits [0..2] to choose a chip,
- * and fanning out bits [3..11] as addresses to all chips.
+ * Similar idea to RAM512 implementation, now using bits [9..11] to choose a chip,
+ * and fanning out bits [0..8] as RAM512 addresses
  */
 
 CHIP RAM4K {
@@ -18,18 +18,18 @@ CHIP RAM4K {
     OUT out[16];
 
     PARTS:
-    RAM512(in=in, load=loadRam1, out=outRam1, address=address[3..11]);
-    RAM512(in=in, load=loadRam2, out=outRam2, address=address[3..11]);
-    RAM512(in=in, load=loadRam3, out=outRam3, address=address[3..11]);
-    RAM512(in=in, load=loadRam4, out=outRam4, address=address[3..11]);
-    RAM512(in=in, load=loadRam5, out=outRam5, address=address[3..11]);
-    RAM512(in=in, load=loadRam6, out=outRam6, address=address[3..11]);
-    RAM512(in=in, load=loadRam7, out=outRam7, address=address[3..11]);
-    RAM512(in=in, load=loadRam8, out=outRam8, address=address[3..11]);
+    RAM512(in=in, load=loadRam1, out=outRam1, address=address[0..8]);
+    RAM512(in=in, load=loadRam2, out=outRam2, address=address[0..8]);
+    RAM512(in=in, load=loadRam3, out=outRam3, address=address[0..8]);
+    RAM512(in=in, load=loadRam4, out=outRam4, address=address[0..8]);
+    RAM512(in=in, load=loadRam5, out=outRam5, address=address[0..8]);
+    RAM512(in=in, load=loadRam6, out=outRam6, address=address[0..8]);
+    RAM512(in=in, load=loadRam7, out=outRam7, address=address[0..8]);
+    RAM512(in=in, load=loadRam8, out=outRam8, address=address[0..8]);
     Mux8Way16(a=outRam1, b=outRam2, c=outRam3, d=outRam4,
               e=outRam5, f=outRam6, g=outRam7, h=outRam8,
-              sel=address[0..2], out=out);
-    DMux8Way(in=load, sel=address[0..2],
+              sel=address[9..11], out=out);
+    DMux8Way(in=load, sel=address[9..11],
              a=loadRam1, b=loadRam2, c=loadRam3, d=loadRam4,
              e=loadRam5, f=loadRam6, g=loadRam7, h=loadRam8);
 }
