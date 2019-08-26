@@ -9,6 +9,11 @@
   *  - Foreach i in 0 to 15, let prod_i = a if b[i] == 1, else 0(repeated 16 times)
   *                          let prod_i_shifted = leftShift i times of prodI
   *  out = sum prod_i_shifted for i in 0 to 15.  (sum can be done with 15 Add16 gates)
+  * Regarding shifting, we can calculate all possible shifts of 'a', by applying shift
+  * to previous shifts (e.g, 'a' shifted 15 times = 'a' shifted 14 times, shifted once more)
+  * Since shifting 0 is a no-op, we don't need anything special for it.
+  * We'll use a Mux to determine whether a partial product(prod_i_shifted) should be a(after shift)
+  * or 0, and finally we'll add all partial products using Add16 gates.
   */
 CHIP Mul{
     IN a[16], b[16];
@@ -18,185 +23,55 @@ CHIP Mul{
     // pNsY means the partial product of a with digit index N, and has to be LShifted Y times
     PARTS:
 
-    // First, we use a Mux for choice (if the i'th digit in b is 1, its multiplication with a is
-    // a, not including the required shifts, otherwise 0)
-    // Theoretically, I could've used something similar to And16,
-    // e.g something like And16(a=a, b[0..15]=b[0], out=p0s0), but
-    // HDL doesn't have syntax to extend a bit to a bus (unlike with true/false).
-    Mux16(a=false, b=a, sel=b[0], out=p0s0);
-    Mux16(a=false, b=a, sel=b[1], out=p1s1);
-    Mux16(a=false, b=a, sel=b[2], out=p2s2);
-    Mux16(a=false, b=a, sel=b[3], out=p3s3);
-    Mux16(a=false, b=a, sel=b[4], out=p4s4);
-    Mux16(a=false, b=a, sel=b[5], out=p5s5);
-    Mux16(a=false, b=a, sel=b[6], out=p6s6);
-    Mux16(a=false, b=a, sel=b[7], out=p7s7);
-    Mux16(a=false, b=a, sel=b[8], out=p8s8);
-    Mux16(a=false, b=a, sel=b[9], out=p9s9);
-    Mux16(a=false, b=a, sel=b[10], out=p10s10);
-    Mux16(a=false, b=a, sel=b[11], out=p11s11);
-    Mux16(a=false, b=a, sel=b[12], out=p12s12);
-    Mux16(a=false, b=a, sel=b[13], out=p13s13);
-    Mux16(a=false, b=a, sel=b[14], out=p14s14);
-    Mux16(a=false, b=a, sel=b[15], out=p15s15);
+    // we use aS# to represent a, left shifted # units.
+    ShiftLeft(in=a, out=aS1);
+    ShiftLeft(in=aS1, out=aS2);
+    ShiftLeft(in=aS2, out=aS3);
+    ShiftLeft(in=aS3, out=aS4);
+    ShiftLeft(in=aS4, out=aS5);
+    ShiftLeft(in=aS5, out=aS6);
+    ShiftLeft(in=aS6, out=aS7);
+    ShiftLeft(in=aS7, out=aS8);
+    ShiftLeft(in=aS8, out=aS9);
+    ShiftLeft(in=aS9, out=aS10);
+    ShiftLeft(in=aS10, out=aS11);
+    ShiftLeft(in=aS11, out=aS12);
+    ShiftLeft(in=aS12, out=aS13);
+    ShiftLeft(in=aS13, out=aS14);
+    ShiftLeft(in=aS14, out=aS15);
 
-    // Now our goal is to shift all partial products the required amount of times,
-    //until we get pNs0 forall N in 0 to 15. Then we'll be able to add them together
+    // we use p# to represent the shifted partial product of the #'th digit.
+    Mux16(a=false, b=a, sel=b[0], out=p0);
+    Mux16(a=false, b=aS1, sel=b[1], out=p1);
+    Mux16(a=false, b=aS2, sel=b[2], out=p2);
+    Mux16(a=false, b=aS3, sel=b[3], out=p3);
+    Mux16(a=false, b=aS4, sel=b[4], out=p4);
+    Mux16(a=false, b=aS5, sel=b[5], out=p5);
+    Mux16(a=false, b=aS6, sel=b[6], out=p6);
+    Mux16(a=false, b=aS7, sel=b[7], out=p7);
+    Mux16(a=false, b=aS8, sel=b[8], out=p8);
+    Mux16(a=false, b=aS9, sel=b[9], out=p9);
+    Mux16(a=false, b=aS10, sel=b[10], out=p10);
+    Mux16(a=false, b=aS11, sel=b[11], out=p11);
+    Mux16(a=false, b=aS12, sel=b[12], out=p12);
+    Mux16(a=false, b=aS13, sel=b[13], out=p13);
+    Mux16(a=false, b=aS14, sel=b[14], out=p14);
+    Mux16(a=false, b=aS15, sel=b[15], out=p15);
 
-    // The fact that I wrote a python program to print the following statements
-    // makes me suspect that this isn't very efficient. TODO improve this
-
-    // Shifts for digit 1
-    ShiftLeft(in=p1s1, out=p1s0);
-    // Shifts for digit 2
-    ShiftLeft(in=p2s2, out=p2s1);
-    ShiftLeft(in=p2s1, out=p2s0);
-    // Shifts for digit 3
-    ShiftLeft(in=p3s3, out=p3s2);
-    ShiftLeft(in=p3s2, out=p3s1);
-    ShiftLeft(in=p3s1, out=p3s0);
-    // Shifts for digit 4
-    ShiftLeft(in=p4s4, out=p4s3);
-    ShiftLeft(in=p4s3, out=p4s2);
-    ShiftLeft(in=p4s2, out=p4s1);
-    ShiftLeft(in=p4s1, out=p4s0);
-    // Shifts for digit 5
-    ShiftLeft(in=p5s5, out=p5s4);
-    ShiftLeft(in=p5s4, out=p5s3);
-    ShiftLeft(in=p5s3, out=p5s2);
-    ShiftLeft(in=p5s2, out=p5s1);
-    ShiftLeft(in=p5s1, out=p5s0);
-    // Shifts for digit 6
-    ShiftLeft(in=p6s6, out=p6s5);
-    ShiftLeft(in=p6s5, out=p6s4);
-    ShiftLeft(in=p6s4, out=p6s3);
-    ShiftLeft(in=p6s3, out=p6s2);
-    ShiftLeft(in=p6s2, out=p6s1);
-    ShiftLeft(in=p6s1, out=p6s0);
-    // Shifts for digit 7
-    ShiftLeft(in=p7s7, out=p7s6);
-    ShiftLeft(in=p7s6, out=p7s5);
-    ShiftLeft(in=p7s5, out=p7s4);
-    ShiftLeft(in=p7s4, out=p7s3);
-    ShiftLeft(in=p7s3, out=p7s2);
-    ShiftLeft(in=p7s2, out=p7s1);
-    ShiftLeft(in=p7s1, out=p7s0);
-    // Shifts for digit 8
-    ShiftLeft(in=p8s8, out=p8s7);
-    ShiftLeft(in=p8s7, out=p8s6);
-    ShiftLeft(in=p8s6, out=p8s5);
-    ShiftLeft(in=p8s5, out=p8s4);
-    ShiftLeft(in=p8s4, out=p8s3);
-    ShiftLeft(in=p8s3, out=p8s2);
-    ShiftLeft(in=p8s2, out=p8s1);
-    ShiftLeft(in=p8s1, out=p8s0);
-    // Shifts for digit 9
-    ShiftLeft(in=p9s9, out=p9s8);
-    ShiftLeft(in=p9s8, out=p9s7);
-    ShiftLeft(in=p9s7, out=p9s6);
-    ShiftLeft(in=p9s6, out=p9s5);
-    ShiftLeft(in=p9s5, out=p9s4);
-    ShiftLeft(in=p9s4, out=p9s3);
-    ShiftLeft(in=p9s3, out=p9s2);
-    ShiftLeft(in=p9s2, out=p9s1);
-    ShiftLeft(in=p9s1, out=p9s0);
-    // Shifts for digit 10
-    ShiftLeft(in=p10s10, out=p10s9);
-    ShiftLeft(in=p10s9, out=p10s8);
-    ShiftLeft(in=p10s8, out=p10s7);
-    ShiftLeft(in=p10s7, out=p10s6);
-    ShiftLeft(in=p10s6, out=p10s5);
-    ShiftLeft(in=p10s5, out=p10s4);
-    ShiftLeft(in=p10s4, out=p10s3);
-    ShiftLeft(in=p10s3, out=p10s2);
-    ShiftLeft(in=p10s2, out=p10s1);
-    ShiftLeft(in=p10s1, out=p10s0);
-    // Shifts for digit 11
-    ShiftLeft(in=p11s11, out=p11s10);
-    ShiftLeft(in=p11s10, out=p11s9);
-    ShiftLeft(in=p11s9, out=p11s8);
-    ShiftLeft(in=p11s8, out=p11s7);
-    ShiftLeft(in=p11s7, out=p11s6);
-    ShiftLeft(in=p11s6, out=p11s5);
-    ShiftLeft(in=p11s5, out=p11s4);
-    ShiftLeft(in=p11s4, out=p11s3);
-    ShiftLeft(in=p11s3, out=p11s2);
-    ShiftLeft(in=p11s2, out=p11s1);
-    ShiftLeft(in=p11s1, out=p11s0);
-    // Shifts for digit 12
-    ShiftLeft(in=p12s12, out=p12s11);
-    ShiftLeft(in=p12s11, out=p12s10);
-    ShiftLeft(in=p12s10, out=p12s9);
-    ShiftLeft(in=p12s9, out=p12s8);
-    ShiftLeft(in=p12s8, out=p12s7);
-    ShiftLeft(in=p12s7, out=p12s6);
-    ShiftLeft(in=p12s6, out=p12s5);
-    ShiftLeft(in=p12s5, out=p12s4);
-    ShiftLeft(in=p12s4, out=p12s3);
-    ShiftLeft(in=p12s3, out=p12s2);
-    ShiftLeft(in=p12s2, out=p12s1);
-    ShiftLeft(in=p12s1, out=p12s0);
-    // Shifts for digit 13
-    ShiftLeft(in=p13s13, out=p13s12);
-    ShiftLeft(in=p13s12, out=p13s11);
-    ShiftLeft(in=p13s11, out=p13s10);
-    ShiftLeft(in=p13s10, out=p13s9);
-    ShiftLeft(in=p13s9, out=p13s8);
-    ShiftLeft(in=p13s8, out=p13s7);
-    ShiftLeft(in=p13s7, out=p13s6);
-    ShiftLeft(in=p13s6, out=p13s5);
-    ShiftLeft(in=p13s5, out=p13s4);
-    ShiftLeft(in=p13s4, out=p13s3);
-    ShiftLeft(in=p13s3, out=p13s2);
-    ShiftLeft(in=p13s2, out=p13s1);
-    ShiftLeft(in=p13s1, out=p13s0);
-    // Shifts for digit 14
-    ShiftLeft(in=p14s14, out=p14s13);
-    ShiftLeft(in=p14s13, out=p14s12);
-    ShiftLeft(in=p14s12, out=p14s11);
-    ShiftLeft(in=p14s11, out=p14s10);
-    ShiftLeft(in=p14s10, out=p14s9);
-    ShiftLeft(in=p14s9, out=p14s8);
-    ShiftLeft(in=p14s8, out=p14s7);
-    ShiftLeft(in=p14s7, out=p14s6);
-    ShiftLeft(in=p14s6, out=p14s5);
-    ShiftLeft(in=p14s5, out=p14s4);
-    ShiftLeft(in=p14s4, out=p14s3);
-    ShiftLeft(in=p14s3, out=p14s2);
-    ShiftLeft(in=p14s2, out=p14s1);
-    ShiftLeft(in=p14s1, out=p14s0);
-    // Shifts for digit 15
-    ShiftLeft(in=p15s15, out=p15s14);
-    ShiftLeft(in=p15s14, out=p15s13);
-    ShiftLeft(in=p15s13, out=p15s12);
-    ShiftLeft(in=p15s12, out=p15s11);
-    ShiftLeft(in=p15s11, out=p15s10);
-    ShiftLeft(in=p15s10, out=p15s9);
-    ShiftLeft(in=p15s9, out=p15s8);
-    ShiftLeft(in=p15s8, out=p15s7);
-    ShiftLeft(in=p15s7, out=p15s6);
-    ShiftLeft(in=p15s6, out=p15s5);
-    ShiftLeft(in=p15s5, out=p15s4);
-    ShiftLeft(in=p15s4, out=p15s3);
-    ShiftLeft(in=p15s3, out=p15s2);
-    ShiftLeft(in=p15s2, out=p15s1);
-    ShiftLeft(in=p15s1, out=p15s0);
-
-    // Now, we add together all numbers of the form 
-    //Adding together everything
-    Add16(a=p0s0, b=p1s0, out=add2);
-    Add16(a=p2s0, b=add2, out=add3);
-    Add16(a=p3s0, b=add3, out=add4);
-    Add16(a=p4s0, b=add4, out=add5);
-    Add16(a=p5s0, b=add5, out=add6);
-    Add16(a=p6s0, b=add6, out=add7);
-    Add16(a=p7s0, b=add7, out=add8);
-    Add16(a=p8s0, b=add8, out=add9);
-    Add16(a=p9s0, b=add9, out=add10);
-    Add16(a=p10s0, b=add10, out=add11);
-    Add16(a=p11s0, b=add11, out=add12);
-    Add16(a=p12s0, b=add12, out=add13);
-    Add16(a=p13s0, b=add13, out=add14);
-    Add16(a=p14s0, b=add14, out=add15);
-    Add16(a=p15s0, b=add15, out=out);
+    // Now, we add together all partial products
+    Add16(a=p0, b=p1, out=add2);
+    Add16(a=p2, b=add2, out=add3);
+    Add16(a=p3, b=add3, out=add4);
+    Add16(a=p4, b=add4, out=add5);
+    Add16(a=p5, b=add5, out=add6);
+    Add16(a=p6, b=add6, out=add7);
+    Add16(a=p7, b=add7, out=add8);
+    Add16(a=p8, b=add8, out=add9);
+    Add16(a=p9, b=add9, out=add10);
+    Add16(a=p10, b=add10, out=add11);
+    Add16(a=p11, b=add11, out=add12);
+    Add16(a=p12, b=add12, out=add13);
+    Add16(a=p13, b=add13, out=add14);
+    Add16(a=p14, b=add14, out=add15);
+    Add16(a=p15, b=add15, out=out);
 }
