@@ -90,4 +90,17 @@ CHIP CPU {
         // Decide whether to pass address or M-value as ALU input
         // instruction[12] - a - 0 when computation uses ARegister, 1 when using M
         Mux16(a=addressRegOut, b=inM, sel=instruction[12], out= AorM);
+
+        // PC: By default, we'll always increment by 1. As for loading, we need to
+        // inspect the 
+        And(a=zr, b=instruction[1], out=jumpViaZr); // zr: out == 0
+        And(a=ng, b=instruction[2], out=jumpViaNg); // ng: out < 0
+        // because of trichotomy(infi trauma), if not zr and ng, then out > 0
+        Nand(a=zr, b=ng, out= outPositive);
+        And(a=outPositive, b=instruction[0], out=jumpViaPositiveOut);
+        // the 3 different 'and' gates above cover all(2^3=8) jump possibilities
+        // the rest of the 'in' fields are 0 and thus won't affect the result.
+        Or8Way(in[0]=jumpViaZr, in[1]=jumpViaNg, in[2]=jumpViaPositiveOut, out=doJump);
+        // TODO what about the MSB of this output
+        PC(in=addressRegOut, out[0..14]=pc, reset=reset, inc=true, load=doJump);
 }
