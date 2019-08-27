@@ -14,32 +14,9 @@
 
 
 
-//  ======= Swap function: using R1 and R2 as array indices
-(swap)
-  @R1
-  A = M
-  D = M
-  @temp
-  M = D // temp = *R1
-
-  @R2
-  A = M
-  D = M
-  @R1
-  A = M
-  M = D // *R1 = *R2
-
-  @temp
-  D = M
-  @R2
-  A = M
-  M = D // *R2 = temp
-
-  @afterSwap
-  0; JMP // go back where we came from
 
 
-// ======== Outer loop of swap function
+// ======== Outer loop of sort function
 @i
 M = 0
 
@@ -99,14 +76,6 @@ M = 0
     D; JGE  // continue of while - && A[j-1] - A[j] < 0, otherwise(>=), finish inner loop
 
     // ===== Loop body, perform swap
-    @jPtr
-    D = M
-    @R1
-    M = D // R1 = &A[j]
-    @jMinusPtr
-    D = M
-    @R2
-    M = D // R2 = &A[j-1]
     @swap
     0; JMP // swap A[j] and A[j-1]
  
@@ -123,5 +92,37 @@ M = 0
 
 @sortOuterLoop
 0; JMP
+
 (endOuterLoop)
 
+// so we won't accidentally enter swap
+@endOfProgram
+0; JMP
+
+//  ======= Swap function: swapping array[j] and array[j-1], using
+//          variables 'jPtr' and 'jMinusPtr' as array pointers
+(swap)
+  @jPtr
+  A = M
+  D = M
+  @temp
+  M = D // temp = *jPtr        IFF  temp = array[j]
+
+  @jMinusPtr
+  A = M
+  D = M
+  @jPtr
+  A = M
+  M = D // *jPtr = *jMinusPtr  IFF  array[j] = array[j-1]
+
+  @temp
+  D = M
+  @jMinusPtr
+  A = M
+  M = D // *jMinusPtr = temp   IFF array[j-1] = temp
+
+  @afterSwap
+  0; JMP // go back where we came from
+
+
+(endOfProgram)

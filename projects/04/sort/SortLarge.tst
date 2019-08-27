@@ -48,7 +48,7 @@ set RAM[2063] 16;
 set RAM[2064] 17;
 set RAM[2065] 18;
 
-repeat 50000 {
+repeat 10000 {
   ticktock;
 }
 output;
@@ -74,7 +74,7 @@ set RAM[2062] 15;
 set RAM[2063] 6;
 set RAM[2064] 17;
 set RAM[2065] 18;
-repeat 50000 {
+repeat 10000 {
   ticktock;
 }
 output;
