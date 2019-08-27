@@ -1,0 +1,27 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Project 3 - Sequential logic 
+                           ----------------------- 
+  
+
+Submitted Files
+.
+|-- a
+|   |-- Bit.hdl 
+|   |-- PC.hdl
+|   |-- RAM64.hdl
+|   |-- RAM8.hdl
+|   `-- Register.hdl
+|-- b
+|   |-- RAM16K.hdl
+|   |-- RAM4K.hdl
+|   `-- RAM512.hdl
+`-- README    This file
+
+
+Remarks
+-------
+See included .hdl sources for explanation/intuition behind the implementation

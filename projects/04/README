@@ -1,0 +1,26 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Project 4 - some ASM programs
+                           ----------------------- 
+  
+
+Submitted Files
+.
+|-- divide
+|   `-- Divide.asm  Long division algorithm
+|-- fill
+|   `-- Fill.asm    Fill program
+|-- mult
+|   `-- mult.asm    Multiplication via repeated addition
+|-- README          This file
+`-- sort
+    `-- Sort.asm    Insertion sort
+
+Remarks
+-------
+See .asm source for documentation(inputs/outputs) and implementation notes
+
+TODO check if divide and sort are required in the 2019-2020 course
