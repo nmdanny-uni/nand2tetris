@@ -25,6 +25,30 @@
  * than to the address resulting from executing the current instruction. 
  */
 
+
+ /* Breakdown of C-instruction digits (when MSB is 1)
+    jump
+    instruction[0] - jump if out > 0
+    instruction[1] - jump if out = 0
+    instruction[2] - jump if out < 0
+    ALU computation destination
+    instruction[3] - memory at A
+    instruction[4] - D register
+    instruction[5] - A register
+    ALU control bits
+    instruction[6] - c6  = no
+    instruction[7] - c5  = f
+    instruction[8] - c4  = ny
+    instruction[9] - c3  = zy
+    instruction[10] - c2 = nx
+    instruction[11] - c1 = zx
+    instruction[12] - a - 0 when computation uses ARegister, 1 when using M
+    misc
+    instruction[13] - doesn't matter
+    instruction[14] - doesn't matter
+    instruction[15] - 1 when C-instruction, otherwise 0.
+ */
+
 CHIP CPU {
 
     IN  inM[16],         // M value input  (M = contents of RAM[A])
@@ -38,6 +62,32 @@ CHIP CPU {
         addressM[15],    // Address in data memory (of M)
         pc[15];          // address of next instruction
 
-    PARTS:
-    // Put your code here:
+        PARTS:
+        // Data register is fairly straightforward. It's updated IFF we have
+        // a C instruction and dest contains M bit
+        And(a=instruction[15], b=instruction[3], out = cInsWithMem);
+        DRegister(in=aluOut, load=cInsWithMem,out=dataRegOut);
+
+        ALU(zx=instruction[11],
+            nx=instruction[10],
+            zy=instruction[9],
+            ny=instruction[8],
+            f=instruction[7],
+            no=instruction[6],
+            out=aluOut, out=outM, zr=zr, ng=ng,
+            x=dataRegOut, y=AorM);
+        // Mux shall pass an instruction to register IFF it is an A-instruction IFF MSB is 0. Otherwise pass ALU out
+        // (If passing A-instruction, ignore the MSB obviously)
+        // TODO should the final bits of this mux be 0?
+        Mux16(a[0..14]=instruction[0..14], b=aluOut, sel=instruction[15], out=addressRegIn);
+        // ARegister should be updated IFF we have an A-instruction, or a *C-instruction whose destination
+        // field contains Address(d1, that is instruction[5]).
+        //     * no need to check that it's a C-instruction, since we eliminated the possibility it's A instruction.
+        Or(a=instruction[15], b=instruction[5], out=shouldUpdateRegister);
+        // TODO should the MSB of of the output be changed?
+        ARegister(in=addressRegIn, load=shouldUpdateRegister, out=addressRegOut, out[0..14]=addressM);
+
+        // Decide whether to pass address or M-value as ALU input
+        // instruction[12] - a - 0 when computation uses ARegister, 1 when using M
+        Mux16(a=addressRegOut, b=inM, sel=instruction[12], out= AorM);
 }
