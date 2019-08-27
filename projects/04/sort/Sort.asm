@@ -49,7 +49,7 @@ M = 0
   D = M // ARRAY_LENGTH
   @i
   D = D - M
-  @end
+  @endOuterLoop
   D; JEQ // if i == ARRAY_LENGTH, exit loop(end program)
 
   // ======== Inner loop of swap function
@@ -63,8 +63,8 @@ M = 0
     // ==== enforcing first loop condition, that i > 0
     @j
     D = M
-    @endOuterLoop
-    D; JLE  // while (i > 0 && ... ) - if false, finish outer loop
+    @endInnerLoop
+    D; JLE  // while (i > 0 && ... ) - if false, finish inner loop
 
     // ==== calculating pointers for A[j] and A[j-1]
     @R14
@@ -95,8 +95,8 @@ M = 0
     @aj
     D = D - M // D = A[j-1] - A[j]
 
-    @endOuterLoop
-    D; JGE  // continue of while - && A[j-1] - A[j] < 0, otherwise(>=), finish outer loop
+    @endInnerLoop
+    D; JGE  // continue of while - && A[j-1] - A[j] < 0, otherwise(>=), finish inner loop
 
     // ===== Loop body, perform swap
     @jPtr
@@ -116,12 +116,12 @@ M = 0
 
     @sortInnerLoop
     0; JMP
-  (endOuterLoop)
+  (endInnerLoop)
 
   @i
   M = M + 1 // increment outer loop index
 
 @sortOuterLoop
 0; JMP
-(end)
+(endOuterLoop)
 
