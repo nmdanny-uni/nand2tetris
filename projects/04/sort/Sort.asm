@@ -89,15 +89,14 @@ M = 0
     @ajMinus
     M = D // ajMinus = *jMinusPtr = arr[j-1]
 
-    // ===== Enforcing second loop condition, that A[j-1] - A[j] <= 0
-
+    // ===== Enforcing second loop condition, that A[j-1] < A[j] (IFF A[j-1] - A[j] < 0)
     @ajMinus
     D = M
     @aj
     D = D - M // D = A[j-1] - A[j]
 
     @endOuterLoop
-    D; JGE  // continue of while - && A[j-1] - A[j] <= 0, if false, finish outer loop
+    D; JGE  // continue of while - && A[j-1] - A[j] < 0, otherwise(>=), finish outer loop
 
     // ===== Loop body, perform swap
     @jPtr
