@@ -86,8 +86,8 @@ CHIP CPU {
         Mux16(a[0..14]=instruction[0..14], b=aluOut, sel=instruction[15], out=addressRegIn);
         // ARegister should be updated IFF we have an A-instruction, or a *C-instruction whose destination
         // field contains Address(d1, that is instruction[5]).
-        //     * no need to check that it's a C-instruction, since we eliminated the possibility it's A instruction.
-        Or(a=instruction[15], b=instruction[5], out=shouldUpdateRegister);
+        Not(in=instruction[15], out=isAinstruction);
+        Or(a=isAinstruction, b=instruction[5], out=shouldUpdateRegister);
         // TODO should the MSB of of the output be changed?
         ARegister(in=addressRegIn, load=shouldUpdateRegister, out=addressRegOut, out[0..14]=addressM);
 
