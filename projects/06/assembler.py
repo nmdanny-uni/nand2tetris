@@ -2,6 +2,72 @@ import argparse
 import re
 import sys
 from typing import Dict, List, Optional
+from enum import IntFlag
+
+
+# The following enums are used as bitfields, their bit representation making up various
+# parts of a C-instruction
+
+def bitfield_to_machine_code(enum: IntFlag, width: int) -> str:
+    """ Converts an enum instance(that is a bitfield) of a given width(in bits),
+        to a string representation of the bits """
+    return f"{enum.value:0={width}b}"
+
+
+class Jump(IntFlag):
+    """ A 3-wide bitfield representing jump conditions dependant on ALU output """
+    NULL = 0   # in case of missing jump flag
+    GE = 1,    # j3: jump if out > 0
+    EQ = 2,    # j2: jump if out = 0
+    LE = 4     # j1: jump if out < 0
+
+
+# Maps strings to the jump bitfield
+JUMP_ST_TO_BITFIELD: Dict[Optional[str], Jump] = {
+    None:  Jump.NULL,
+    "JGT": Jump.GE,
+    "JEQ": Jump.EQ,
+    "JGE": Jump.GE | Jump.EQ,
+    "JLT": Jump.LE,
+    "JNE": Jump.GE | Jump.LE,
+    "JLE": Jump.LE | Jump.EQ,
+    "JMP": Jump.GE | Jump.EQ | Jump.LE
+}
+
+
+class Dest(IntFlag):
+    """ A 3-wide bitfield representing the destination of an ALU computation """
+    M = 1,  # d3: memory referenced at A ("M")
+    D = 2,  # d2: D register("D")
+    A = 4,  # d1: A register("A")
+
+# Maps strings to dest bitfield
+DEST_ST_TO_BITFIELD = {
+    "M": Dest.M,
+    "D": Dest.D,
+    "A": Dest.A,
+    "MD": Dest.M | Dest.D,
+    "AM": Dest.A | Dest.M,
+    "AD": Dest.A | Dest.D,
+    "AMD": Dest.A | Dest.M | Dest.D
+}
+
+class Comp(IntFlag):
+    """ A 7-wide bitfield representing ALU flags """
+    NO = 1,   # c6: negate the output
+    F = 2,    # c5: Add(if present), otherwise And
+    NY = 4,   # c4: negate the second operand
+    ZY = 8,   # c3: zero the second operand
+    NX = 16,  # c2: negate the first operand
+    ZX = 32,  # c1: zero the first operand
+    A = 64,   # a: 0 for computations that use ARegister, 1 for those that use the MRegister
+
+
+class ExtendedALUFlags(IntFlag):
+    pass
+
+
+
 
 DEFAULT_SYMBOL_TABLE = {
     "R0": 0,
@@ -95,12 +161,18 @@ class AInstruction(Statement):
 
 class CInstruction(Statement):
     """ A C-instruction"""
-    def __init__(self, rom_ix, contents: str):
+    def __init__(self, rom_ix: int, contents: str,
+                 jump: Jump = None, dest: Dest = None,
+                 comp: Comp = None, ext: ExtendedALUFlags = None):
         super().__init__(rom_ix)
         self.__contents = contents
+        self.__jump = jump
+        self.__dest = dest
+        self.__comp = comp
+        self.__ext = ext
 
     def __str__(self):
-        return f"{self.__contents}"
+        return f"{self.__contents:^20} {repr(self.__jump):^20}"
 
 
 class StatementParser:
@@ -128,19 +200,27 @@ class StatementParser:
                 rom_ix += 1
                 continue
 
-            statements.append(CInstruction(rom_ix, line))
+            statements.append(CInstructionParser.parse(line, line_num, rom_ix))
             rom_ix += 1
 
         return statements
 
 
-class Assembler:
-    def __init__(self, asm_raw: str):
+class CInstructionParser:
+    """ Responsible for parsing the contents of a C instruction """
 
-        self.__tokens = tokenize(asm_raw)
-        self.__statements = StatementParser.parse_tokens(self.__tokens)
-        tbl = SymbolTable(self.__statements)
+    # first group contains most of the instruction, second part may include
+    # a jump instruction.
+    MAIN_PATTERN = re.compile(r"^([^;\s]+)(?:;(.*))?")
 
+    @staticmethod
+    def parse(inst: str, line_number: int, rom_ix: int) -> CInstruction:
+        match = re.match(CInstructionParser.MAIN_PATTERN, inst)
+        if not match:
+            raise CompilationError(f"Failed to parse CInstruction \"{inst}\" at line {line_number}")
+        jump = JUMP_ST_TO_BITFIELD[match.group(2)]
+        return CInstruction(rom_ix, contents=inst, jump=jump, dest=None,
+                            comp=None, ext=None)
 
 class SymbolTable:
     """ Symbol table, allowing to resolve variables and labels """
