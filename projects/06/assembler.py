@@ -39,27 +39,24 @@ class CompilationError(Exception):
 
 class Statement:
     """ A statement is any meaningful line in an ASM file """
-    def __init__(self, line_number: int, rom_ix: Optional[int] = None):
+    def __init__(self, rom_ix: int):
         """ Creates a statement
-        :param line_number: Line number in file where the statement occurred
         :param rom_ix: "Line" number in ROM (like above, ignoring pseudo-statements).
         """
-        self.__line_number = line_number
         self.__rom_ix = rom_ix
 
     @property
-    def rom_index(self) -> Optional[int]:
+    def rom_index(self) -> int:
         """ Returns the line number(0 indexed) of this statement in the ROM, that is,
             it's line number after ignoring pseudo statements such as labels.
-            Returns None for pseudo-statements
         """
         return self.__rom_ix
 
 
 class Label(Statement):
     """ A label, which is a pseudo-statement"""
-    def __init__(self, line_number: int, label_name: str):
-        super().__init__(line_number)
+    def __init__(self, rom_ix: int, label_name: str):
+        super().__init__(rom_ix)
         self.__label_name = label_name
 
     @property
@@ -72,18 +69,34 @@ class Label(Statement):
 
 class AInstruction(Statement):
     """ An A-instruction, containing an address or a variable(to be resolved at later stage)"""
-    def __init__(self, line_number: int, rom_ix: int, value: str):
-        super().__init__(line_number, rom_ix)
-        self.__value = value
+    def __init__(self, rom_ix: int, st: str):
+        super().__init__(rom_ix)
+        self.__str_content = st
+        self.__address = int(st) if st.isdigit() else None
+
+    @property
+    def string_contents(self):
+        return self.__str_content
+
+    @property
+    def address(self) -> Optional[int]:
+        return self.__address
+
+    @address.setter
+    def address(self, address: int):
+        self.__address = address
 
     def __str__(self):
-        return f"{self.__value}"
+        st = f"@{self.string_contents}"
+        if self.address:
+            st += f" {self.address}"
+        return st
 
 
 class CInstruction(Statement):
     """ A C-instruction"""
-    def __init__(self, line_number, rom_ix, contents: str):
-        super().__init__(line_number, rom_ix)
+    def __init__(self, rom_ix, contents: str):
+        super().__init__(rom_ix)
         self.__contents = contents
 
     def __str__(self):
@@ -106,17 +119,16 @@ class StatementParser:
         for line_num, line in enumerate(tokens):
             match = StatementParser.LABEL_REGEX.match(line)
             if match:
-                statements.append(Label(line_num, match.group(1)))
+                statements.append(Label(rom_ix, match.group(1)))
                 continue
 
             match = StatementParser.AInstruction_REGEX.match(line)
             if match:
-                statements.append(
-                    AInstruction(line_num, rom_ix, match.group(1)))
+                statements.append(AInstruction(rom_ix, match.group(1)))
                 rom_ix += 1
                 continue
 
-            statements.append(CInstruction(line_num, rom_ix, line))
+            statements.append(CInstruction(rom_ix, line))
             rom_ix += 1
 
         return statements
@@ -126,26 +138,43 @@ class Assembler:
     def __init__(self, asm_raw: str):
 
         self.__tokens = tokenize(asm_raw)
-        joined = "\n".join(self.__tokens)
-        print(f"tokens:\n=====\n{joined}\n======")
         self.__statements = StatementParser.parse_tokens(self.__tokens)
-        joinedStatements = "\n".join(map(str, self.__statements))
-        print(f"statements:\n\n{joinedStatements}")
-
-    def __create_symbol_table(self):
-        pass
+        tbl = SymbolTable(self.__statements)
 
 
 class SymbolTable:
+    """ Symbol table, allowing to resolve variables and labels """
     def __init__(self, statements: List[Statement]):
+        """ Creates a symbol table from a list of statements. """
         self.__table = DEFAULT_SYMBOL_TABLE.copy()
-        labels = (stm for stm in statements if stm is Label)
-        for label_stm in labels:
-            label = label_stm.label()
-            if label in self.__table:
-                raise CompilationError(
-                    f"Label {label_stm.label()} appears multiple times in ASM")
-            self.__table[label] = label_stm.asm_line_number()
+        self.__next_var_pos = VARIABLES_MEMORY_LOCATION
+
+        # first pass, we update labels
+        for stmt in statements:
+            if isinstance(stmt, Label):
+                label = stmt.label
+                if label in self.__table:
+                    raise CompilationError(
+                        f"Label {label} appears multiple times in ASM")
+                self.__table[label] = stmt.rom_index
+
+        # second pass, we create variables
+
+        for stmt in statements:
+            if isinstance(stmt, AInstruction) and stmt.string_contents not in self.__table:
+                    self.__table[stmt.string_contents] = self.__next_var_pos
+                    self.__next_var_pos += 1
+
+    def resolve_symbols(self, statements: List[Statement]):
+        """ Updates addresses of A instructions to refer to their locations"""
+        for stmt in statements:
+            if isinstance(stmt, AInstruction) and stmt.address is None:
+                stmt.address = self.__get_address(stmt.string_contents)
+
+    def __get_address(self, symbol: str) -> int:
+        if symbol in self.__table:
+            return self.__table[symbol]
+        raise CompilationError(f"Couldn't resolve symbol \"{symbol}\"")
 
 
 COMMENT_REGEX = re.compile(r"//.*")
@@ -174,13 +203,37 @@ def main():
         nargs='?',
         default=sys.stdin,
         help='Hack .asm file to be assembled. (Pass as argument or via STDIN)')
+
+    argparser.add_argument('--print-tokens',
+                           action='store_true',
+                           help='print tokenized form of file')
+    argparser.add_argument('--print-statements',
+                           action='store_true',
+                           help='print statements before symbols')
+    argparser.add_argument('--print-resolved-statements',
+                           action='store_true',
+                           help='print statements after symbol resolution')
+
     args = argparser.parse_args()
 
     with args.asm as asm_file:
         contents = asm_file.read()
-        parser = Assembler(contents)
+        tokens = tokenize(contents)
+        if args.print_tokens:
+            joined = "\n".join(tokens)
+            print(joined)
+
+        statements = StatementParser.parse_tokens(tokens)
+        if args.print_statements:
+            joined = "\n".join(str(stmt) for stmt in statements)
+            print(joined)
+
+        tbl = SymbolTable(statements)
+        tbl.resolve_symbols(statements)
+        if args.print_resolved_statements:
+            joined = "\n".join(str(stmt) for stmt in statements)
+            print(joined)
 
 
 if __name__ == '__main__':
-    main()
     main()
