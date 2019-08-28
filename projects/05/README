@@ -1,0 +1,24 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Project 5 - implementation of computer
+                           ----------------------- 
+  
+
+Submitted Files
+
+.
+|-- Computer.hdl   implementation of Computer
+|-- CPU.hdl        implementation of CPU
+|-- CpuMul.hdl     identical to above, but using ExtendAlu instead
+|-- ExtendAlu.hdl  ALU with support for mult and shift operations
+|-- Memory.hdl     implementation of memory module
+`-- README         this file
+
+
+Remarks
+-------
+See included .hdl files for implementation notes, intuition etc...
+TODO check if the CpuMul and ExtendAlu are requried in 2019-2020 course

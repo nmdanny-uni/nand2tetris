@@ -29,5 +29,51 @@ CHIP CpuMul{
         addressM[15],    // Address in data memory (of M)
         pc[15];          // address of next instruction
 
-     PARTS:
+    PARTS:
+    /* The implementation is identical to "CPU.hdl", but now using the extended ALU(which
+       has a slightly different signature)
+     */
+
+
+    // Data register is fairly straightforward. It's updated IFF we have
+    // a C instruction and dest contains D bit
+    And(a=instruction[15], b=instruction[4], out = cInsWithMem);
+    DRegister(in=aluOut, load=cInsWithMem,out=dataRegOut);
+
+    ExtendAlu(instruction=instruction[6..14], out=aluOut, out=outM, zr=zr, ng=ng,
+              x=dataRegOut, y=AorM);
+
+    // writeM is asserted for a C-instruction with the 'M' bit set
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    // Mux shall pass an instruction to register IFF it is an A-instruction IFF MSB is 0. Otherwise pass ALU out
+    Mux16(a=instruction, b=aluOut, sel=instruction[15], out=addressRegIn);
+    // ARegister should be updated IFF we have an A-instruction, or a *C-instruction whose destination
+    // field contains Address(d1, that is instruction[5]).
+    Not(in=instruction[15], out=isAinstruction);
+    Or(a=isAinstruction, b=instruction[5], out=shouldUpdateRegister);
+    ARegister(in=addressRegIn, load=shouldUpdateRegister, out=addressRegOut, out[0..14]=addressM);
+
+    // Decide whether to pass address or M-value as ALU input
+    // instruction[12] - a - 0 when computation uses ARegister, 1 when using M
+    Mux16(a=addressRegOut, b=inM, sel=instruction[12], out= AorM);
+
+    // PC: By default, we'll always increment by 1. As for loading, we need to
+    // inspect the jump bits and ALU out flags
+
+    // due to trichotomy, if the 'zr' and 'ng' flags aren't set, the the out is positive
+    // from demorgan, this is equivalent to not (zr or ng)
+    Or(a=zr, b=ng, out=zrOrNg);
+    Not(in=zrOrNg, out=ps);
+
+    // we can use 3 different 'and' gates 
+    And(a=zr, b=instruction[1], out=jumpViaZr); // zr: out == 0
+    And(a=ng, b=instruction[2], out=jumpViaNg); // ng: out < 0
+    And(a=ps, b=instruction[0], out=jumpViaPs);
+    // the 3 different 'and' gates above cover all(2^3=8) jump possibilities
+    Or8Way(in[0]=jumpViaZr, in[1]=jumpViaNg, in[2]=jumpViaPs, out=doJumpIfC);
+    // ensure we are in a c-instruction before jumping
+    And(a=doJumpIfC, b=instruction[15], out=doJump);
+
+    PC(in=addressRegOut, out[0..14]=pc, reset=reset, inc=true, load=doJump);
 }
