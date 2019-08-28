@@ -81,14 +81,11 @@ CHIP CPU {
         And(a=instruction[15], b=instruction[3], out=writeM);
 
         // Mux shall pass an instruction to register IFF it is an A-instruction IFF MSB is 0. Otherwise pass ALU out
-        // (If passing A-instruction, ignore the MSB obviously)
-        // TODO should the final bits of this mux be 0?
-        Mux16(a[0..14]=instruction[0..14], b=aluOut, sel=instruction[15], out=addressRegIn);
+        Mux16(a=instruction, b=aluOut, sel=instruction[15], out=addressRegIn);
         // ARegister should be updated IFF we have an A-instruction, or a *C-instruction whose destination
         // field contains Address(d1, that is instruction[5]).
         Not(in=instruction[15], out=isAinstruction);
         Or(a=isAinstruction, b=instruction[5], out=shouldUpdateRegister);
-        // TODO should the MSB of of the output be changed?
         ARegister(in=addressRegIn, load=shouldUpdateRegister, out=addressRegOut, out[0..14]=addressM);
 
         // Decide whether to pass address or M-value as ALU input
@@ -96,17 +93,21 @@ CHIP CPU {
         Mux16(a=addressRegOut, b=inM, sel=instruction[12], out= AorM);
 
         // PC: By default, we'll always increment by 1. As for loading, we need to
-        // inspect the jump bits
+        // inspect the jump bits and ALU out flags
+
+        // due to trichotomy, if the 'zr' and 'ng' flags aren't set, the the out is positive
+        // from demorgan, this is equivalent to not (zr or ng)
+        Or(a=zr, b=ng, out=zrOrNg);
+        Not(in=zrOrNg, out=ps);
+
+        // we can use 3 different 'and' gates 
         And(a=zr, b=instruction[1], out=jumpViaZr); // zr: out == 0
         And(a=ng, b=instruction[2], out=jumpViaNg); // ng: out < 0
-        // because of trichotomy(infi trauma), if not zr and ng, then out > 0
-        Nand(a=zr, b=ng, out= ps);
-        And(a=ps, b=instruction[0], out=jumpViaPositiveOut);
+        And(a=ps, b=instruction[0], out=jumpViaPs);
         // the 3 different 'and' gates above cover all(2^3=8) jump possibilities
-        // the rest of the 'in' fields are 0 and thus won't affect the result.
-        Or8Way(in[0]=jumpViaZr, in[1]=jumpViaNg, in[2]=jumpViaPositiveOut, out=doJumpIfC);
+        Or8Way(in[0]=jumpViaZr, in[1]=jumpViaNg, in[2]=jumpViaPs, out=doJumpIfC);
         // ensure we are in a c-instruction before jumping
         And(a=doJumpIfC, b=instruction[15], out=doJump);
-        // TODO what about the MSB of this output
+
         PC(in=addressRegOut, out[0..14]=pc, reset=reset, inc=true, load=doJump);
 }
