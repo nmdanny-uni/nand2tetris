@@ -21,3 +21,8 @@ all:
 #	...
 # Where each preqrequisite is a rule name, and each command is a command-line command (for example chmod, 
 # javac, echo, etc').
+
+test:
+	python3 -m unittest
+	chmod +x ./mytest.sh
+	./mytest.sh
