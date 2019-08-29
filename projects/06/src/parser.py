@@ -1,7 +1,7 @@
 
 import re
 from typing import Dict, List, Optional
-from model import *
+from model import Jump, Comp, Dest, Statement, AInstruction, CInstruction, Label, CompilationError
 
 COMMENT_REGEX = re.compile(r"//.*")
 WHITESPACE_REGEX = re.compile(r"\s+")
