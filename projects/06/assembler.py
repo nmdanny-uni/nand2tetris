@@ -2,6 +2,7 @@ import argparse
 import re
 import sys
 import os
+from model import CompilationError
 from parser import StatementParser, tokenize
 from symbol_table import SymbolTable
 from pathlib import Path
@@ -71,12 +72,12 @@ def main():
     if Path(args.input).is_dir() and args.out:
         raise ValueError("Can't specify an output path for a directory")
 
-    if Path(args.input).is_file():
-        process_file(args, args.input)
-    else:
-        files = Path(args.input).glob("*.asm")
-        for asm_file in files:
+    files = [args.input] if Path(args.input).is_file() else Path(args.input).glob("*.asm")
+    for asm_file in files:
+        try:
             process_file(args, asm_file)
+        except CompilationError as err:
+            print(f"Compilation error while assembling {asm_file}: {err}")
 
 
 

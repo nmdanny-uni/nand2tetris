@@ -135,8 +135,8 @@ class AInstruction(Statement):
         self.__address = address
 
     def to_machine_code(self) -> str:
-        if not self.address:
-            raise ValueError("Invalid usage: must translate AInstruction symbol before converting to machine code")
+        if self.address is None:
+            raise ValueError(f"Invalid usage: must translate AInstruction symbol before converting to machine code")
 
         return f"0{self.address:=0{AInstruction.WIDTH_BITS}b}"
 
