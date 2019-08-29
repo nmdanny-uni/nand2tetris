@@ -113,9 +113,9 @@ class StatementParser:
     """
     Class responsible for parsing tokens as statements.
     """
-    LABEL_REGEX = re.compile(r"\((\w+)\)")
+    LABEL_REGEX = re.compile(r"\((.+)\)")
 
-    AInstruction_REGEX = re.compile(r"@(\w+)")
+    AInstruction_REGEX = re.compile(r"@(.+)")
 
     @staticmethod
     def parse_tokens(tokens: List[str]) -> List[Statement]:
