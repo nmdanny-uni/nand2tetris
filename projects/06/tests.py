@@ -1,6 +1,6 @@
 import unittest
 
-from model import Jump, Dest, Comp, bitfield_to_machine_code
+from model import Jump, Dest, Comp
 from parser import JUMP_ST_TO_BITFIELD, DEST_ST_TO_BITFIELD, COMP_ST_TO_BITFIELD
 
 class TestBitFields(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestBitFields(unittest.TestCase):
         }
         for (jump_st, expected) in possibilities.items():
             enum = JUMP_ST_TO_BITFIELD[jump_st]
-            self.assertEqual(expected, bitfield_to_machine_code(enum, 3))
+            self.assertEqual(expected, enum.to_machine_code())
 
 
     def test_dest(self):
@@ -33,7 +33,7 @@ class TestBitFields(unittest.TestCase):
         }
         for (dest_st, expected) in possibilities.items():
             enum = DEST_ST_TO_BITFIELD[dest_st]
-            self.assertEqual(expected, bitfield_to_machine_code(enum, 3))
+            self.assertEqual(expected, enum.to_machine_code())
 
 
     def test_comp(self):
@@ -70,5 +70,5 @@ class TestBitFields(unittest.TestCase):
         }
         for (comp_st, expected) in possibilities.items():
             enum = COMP_ST_TO_BITFIELD[comp_st]
-            self.assertEqual(expected, bitfield_to_machine_code(enum, 7), msg=f"while comparing {comp_st}")
+            self.assertEqual(expected, enum.to_machine_code())
 
