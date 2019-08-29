@@ -1,6 +1,6 @@
 
 import re
-from typing import Dict, List, Optional
+from typing import List, Optional
 from model import Jump, Comp, Dest, Statement, AInstruction, CInstruction, Label, CompilationError
 
 COMMENT_REGEX = re.compile(r"//.*")
@@ -21,8 +21,8 @@ def tokenize(asm: str) -> List[str]:
     return statements
 
 
-# Maps strings to the jump bitfield
-JUMP_ST_TO_BITFIELD: Dict[Optional[str], Jump] = {
+# Maps jump strings to the jump bitfield
+JUMP_ST_TO_BITFIELD = {
     None:  Jump.NULL,
     "JGT": Jump.GE,
     "JEQ": Jump.EQ,
@@ -34,7 +34,7 @@ JUMP_ST_TO_BITFIELD: Dict[Optional[str], Jump] = {
 }
 
 
-# Maps strings to dest bitfield
+# Maps destination strings to dest bitfield
 DEST_ST_TO_BITFIELD = {
     None: Dest.NULL,
     "M": Dest.M,
@@ -46,7 +46,7 @@ DEST_ST_TO_BITFIELD = {
     "AMD": Dest.A | Dest.M | Dest.D
 }
 
-
+# Maps computation strings to comp bitfield
 COMP_ST_TO_BITFIELD = {
     "0": Comp.C1 | Comp.C3 | Comp.C5,
     "1": Comp.C1 | Comp.C2 | Comp.C3 | Comp.C4 | Comp.C5 | Comp.C6,
@@ -118,11 +118,33 @@ class CInstructionParser:
     # a jump instruction.
     MAIN_PATTERN = re.compile(r"^([^;\s]+)(?:;(.*))?")
 
+    # to be used on the first group of above regex, if two groups are parsed,
+    # the first includes the destination, and the second includes computation.
+    # if only one group is parsed, it includes the computation
+    COMP_DEST_PARSER = re.compile(r"^([^=]+)(?:=(.+))?$")
+
     @staticmethod
     def parse(inst: str, line_number: int, rom_ix: int) -> CInstruction:
         match = re.match(CInstructionParser.MAIN_PATTERN, inst)
         if not match:
             raise CompilationError(f"Failed to parse CInstruction \"{inst}\" at line {line_number}")
         jump = JUMP_ST_TO_BITFIELD[match.group(2)]
-        return CInstruction(rom_ix, contents=inst, jump=jump, dest=None,
-                            comp=None, ext=None)
+
+        dest_st = None
+        comp_dest_match = re.match(CInstructionParser.COMP_DEST_PARSER, match.group(1))
+        if comp_dest_match.group(2):
+            dest_st = comp_dest_match.group(1)
+            comp_st = comp_dest_match.group(2)
+        else:
+            comp_st = comp_dest_match.group(1)
+
+        if dest_st not in DEST_ST_TO_BITFIELD:
+            raise CompilationError(f"Failed to parse CInstruction: unsupported destination \"{dest_st}\" at line {line_number}")
+        dest = DEST_ST_TO_BITFIELD[dest_st]
+
+        if comp_st not in COMP_ST_TO_BITFIELD:
+            raise CompilationError(f"Failed to parse CInstruction: unsupported computation \"{comp_st}\" at line {line_number}")
+        comp = COMP_ST_TO_BITFIELD[comp_st]
+
+        return CInstruction(rom_ix, contents=inst, jump=jump, dest=dest,
+                            comp=comp, ext=None)

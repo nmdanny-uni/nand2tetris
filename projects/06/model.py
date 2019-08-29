@@ -2,8 +2,6 @@ from enum import IntFlag
 from typing import Optional
 
 
-
-
 class CompilationError(Exception):
     """ Thrown upon errors in compilation """
     pass
@@ -17,6 +15,7 @@ def bitfield_to_machine_code(enum: IntFlag, width: int) -> str:
 
 # The following enums are used as bitfields, their bit representation making up various
 # parts of a C-instruction
+
 
 class Jump(IntFlag):
     """ A 3-wide bitfield representing jump conditions dependant on ALU output """
@@ -66,6 +65,10 @@ class Statement:
         """
         return self.__rom_ix
 
+    def to_machine_code(self) -> str:
+        """ Returns the machine code representation of this statement, as a string of bytes,
+            where the MSB is the first character, and LSB is last character """
+        raise NotImplementedError
 
 class Label(Statement):
     """ A label, which is a pseudo-statement"""
@@ -120,5 +123,5 @@ class CInstruction(Statement):
         self.__ext = ext
 
     def __str__(self):
-        return f"{self.__contents:^20} {repr(self.__jump):^20}"
+        return f"{self.__contents:^20} {repr(self.__jump):^3} {repr(self.__dest):^3} {repr(self.__comp):^8}"
 
