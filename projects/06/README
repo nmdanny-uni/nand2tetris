@@ -1,0 +1,91 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Project 7 - implementation of assembler in Python
+                           ----------------------- 
+  
+
+Submitted Files
+
+.
+|-- README
+|-- Makefile             Makefile(ensures Assembler is executable)
+|-- Assembler            Executable
+|-- assembler.py         Contains main(), responsible for driving the assembly process
+|-- model.py             Defines the main types used in the program
+|-- parser.py            Responsible for parsing
+|-- symbol_table.py      Responsible for resolving labels and variables
+`-- tests.py             Unit tests
+
+Overview
+--------
+The assembler works in several stages
+
+* Tokenization of input .asm file - getting rid of whitespaces and comments
+* Parsing of file into statements, there are multiple classes representing various
+  statement types (Label, A-instruction, C-instruction).
+* Creating a symbol table, performing two passes:
+   - one pass for mapping labels to their locations
+   - second pass that resolves label references within A-instructions(if such mapping exists),
+     otherwise treating the symbol as a variable
+* Emitting binary machine code from parsed statements
+* Printing machine code(as strings) to the appropriate file
+
+Design
+------
+"model.py":
+Responsible for modelling assembly statements using a small class hierarchy:
+Statement
+  ^-- Label
+  ^-- AInstruction
+  ^-- CInstruction
+
+Every statement contains a "rom_index" which refers to the statements index in the emitted .hack code
+This index is computed during parse times, and this index ignores pseudostatements (Label)
+Moreover, the "to_machine_code" method is responsible for emitting machine code from the parsed statements
+
+AInstruction contains the original symbol(which may be an address, or a literal number), and a
+numerical address field, which may need to be updated by the symbol-table module.
+
+CInstruction is more interesting: we use int-enums as bitfields to represent the different fields
+in an instruction (comp, dest, jump, and ALU-mode). I found this to be the most natural way of
+expressing them, as it maps closely to hardware. Emitting machine code from an enum, is simply
+printing the binary representation of the enum's value(and padding with 0s as needed)
+
+
+"parser.py": 
+Responsible for tokenization of input and parsing.
+There are two parsing classes (which are stateless) that operate in a
+hierarchial way:
+
+The StatementParser is responsible for parsing tokens(list of strings) into a list of
+statements. It does so using the CInstructionParser as needed
+
+CInstructionParser is responsible for parsing various fields of a C-instruction, using some
+giant lookup tables
+
+These lookup tables, albeit not very elegant or extensible, allow for a very simple and
+straightforward implementation of the parsers.
+
+
+"assembler.py"
+The main entry point to our program. It handles arguments(I added a few for debug purposes) and drives
+the whole assembly process as explained in the overview above.
+
+
+
+Remarks & Implementation notes
+-------
+* The "HackIntFlag" inherits "IntFlag" class(enum), and contains a bit-width field that allows the class to
+  print various enum values, padding them with 0s if needed to reach the required bit width. (Done
+  with a format string)
+
+* The statement parser uses regexes to determine whether we have a label or an A-instruction. Otherwise, it
+  assumes it's a C-instruction, and delegates parsing responsibility to CInstructionParser
+  Likewise, the CInstructionParser uses a regex to break up the instruction to a jump part(if exists)
+  and a computation and dest part.
+  
+* Although not required, the program has some error handling, printing informative messages upon
+  compilation errors. (This was mostly done to aid debugging)

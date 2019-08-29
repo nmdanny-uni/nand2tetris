@@ -2,7 +2,10 @@ import re
 from typing import List, Optional
 from model import Jump, Comp, Dest, Statement, AInstruction, CInstruction, Label, CompilationError, ExtendedALUFlags
 
+# detects comments
 COMMENT_REGEX = re.compile(r"//.*")
+
+# detects whitespace
 WHITESPACE_REGEX = re.compile(r"\s+")
 
 

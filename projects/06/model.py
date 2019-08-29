@@ -10,7 +10,7 @@ class CompilationError(Exception):
 class HackIntFlag(IntFlag):
     """ An extension of 'IntFlag', which is basically a Python Enum that supports
         bitwise operations, with a method that easily converts it to a string of
-        bytes
+        bits
     """
     def to_machine_code(self) -> str:
         """ Converts an instance of this enum to a string representation of
