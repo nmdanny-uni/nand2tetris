@@ -49,9 +49,9 @@ class SymbolTable:
                 self.__table[label] = stmt.rom_index
 
         # second pass, we create variables
-
         for stmt in statements:
-            if isinstance(stmt, AInstruction) and stmt.string_contents not in self.__table:
+            if (isinstance(stmt, AInstruction) and stmt.address is None and
+                stmt.string_contents not in self.__table):
                     self.__table[stmt.string_contents] = self.__next_var_pos
                     self.__next_var_pos += 1
 
