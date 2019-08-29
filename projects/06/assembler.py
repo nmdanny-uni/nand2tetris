@@ -26,6 +26,13 @@ def main():
                            action='store_true',
                            help='print statements after symbol resolution')
 
+    argparser.add_argument('--print-machine-code',
+                           action='store_false',
+                           help='print the raw machine code(as a string of bits)')
+    
+    argparser.add_argument('-v', '--verbose',
+                           action='store_true',
+                           help='include debug information')
     args = argparser.parse_args()
 
     with args.asm as asm_file:
@@ -45,6 +52,11 @@ def main():
         if args.print_resolved_statements:
             joined = "\n".join(str(stmt) for stmt in statements)
             print(joined)
+
+        if args.print_machine_code:
+            for stmt in statements:
+                st = f"{stmt.to_machine_code():16} {stmt}" if args.verbose else stmt.to_machine_code()
+                print(st)
 
 
 if __name__ == '__main__':

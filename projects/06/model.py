@@ -117,6 +117,7 @@ class AInstruction(Statement):
         self.__str_content = st
         self.__address = int(st) if st.isdigit() else None
 
+    # Number of bits required to encode any address
     WIDTH_BITS = 15
 
     @property
@@ -129,13 +130,15 @@ class AInstruction(Statement):
 
     @address.setter
     def address(self, address: int):
+        if address > 2 ** AInstruction.WIDTH_BITS:
+            raise CompilationError(f"Address {address} too large")
         self.__address = address
 
     def to_machine_code(self) -> str:
         if not self.address:
             raise ValueError("Invalid usage: must translate AInstruction symbol before converting to machine code")
 
-        return "0{self.address={AInstruction.WIDTH_BITS}b}"
+        return f"0{self.address:=0{AInstruction.WIDTH_BITS}b}"
 
     def __str__(self):
         st = f"@{self.string_contents}"
@@ -164,5 +167,5 @@ class CInstruction(Statement):
         return f"{header}{comp}{dest}{jump}"
 
     def __str__(self):
-        return f"{self.__contents:^20} {repr(self.__jump):^3} {repr(self.__dest):^3} {repr(self.__comp):^8}"
+        return f"{self.__contents}" # {repr(self.__jump):^3} {repr(self.__dest):^3} {repr(self.__comp):^8}"
 
