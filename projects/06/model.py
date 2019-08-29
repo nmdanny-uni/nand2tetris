@@ -27,7 +27,8 @@ class HackIntFlag(IntFlag):
 
 
 class Jump(HackIntFlag):
-    """ A 3-wide bitfield representing jump conditions dependant on ALU output """
+    """ A 3-wide bitfield representing jump conditions dependant on ALU output
+        This represents the bits at instruction[0..2] """
     NULL = 0   # in case of missing jump flag
     GE = 1,    # j3: jump if out > 0
     EQ = 2,    # j2: jump if out = 0
@@ -40,7 +41,8 @@ class Jump(HackIntFlag):
 
 
 class Dest(HackIntFlag):
-    """ A 3-wide bitfield representing the destination of an ALU computation """
+    """ A 3-wide bitfield representing the destination of an ALU computation
+        This represents the bits at instruction[3..5] """
     NULL = 0,  # if value isn't stored anywhere
     M = 1,     # d3: memory referenced at A ("M")
     D = 2,     # d2: D register("D")
@@ -52,7 +54,10 @@ class Dest(HackIntFlag):
         return 3
 
 class Comp(HackIntFlag):
-    """ A 7-wide bitfield representing ALU flags """
+    """ A 7-wide bitfield representing ALU flags
+        This represents the bits at instruction[6..12]
+    """
+    # note, in extended (mult/shift) operation, these flags have different meanings.
     NULL = 0,      # for an and instruction
     C6 = NO = 1,   # negate the output
     C5 = F = 2,    # Add(if present), otherwise And
@@ -68,8 +73,21 @@ class Comp(HackIntFlag):
         return 7
 
 
-class ExtendedALUFlags(IntFlag):
-    pass
+class ExtendedALUFlags(HackIntFlag):
+    """ A 2-wide bitfield allowing to differ whether we are using the normal ALU
+        (as defined in the book), or a mult/shift extension(as defined in moodle)
+        This represents the bits at instruction[13..14]
+        TODO check if relevant for 2019-2020 course
+    """
+    Normal = 0b11,  # Normal ALU mode,
+    Mult = 0b10,    # multiplication (not implemented, only added for clarification)
+    Shift = 0b01    # shift operation
+
+
+    @property
+    def bit_width(self) -> int:
+        """ Number of bits required to represent any value in this bitfield """
+        return 2
 
 
 
@@ -160,11 +178,11 @@ class CInstruction(Statement):
         self.__ext = ext
 
     def to_machine_code(self) -> str:
-        header = "111"  # todo support extra operators depending on 2 LSB bits
+        ext = self.__ext.to_machine_code()
         comp = self.__comp.to_machine_code()
         dest = self.__dest.to_machine_code()
         jump = self.__jump.to_machine_code()
-        return f"{header}{comp}{dest}{jump}"
+        return f"1{ext}{comp}{dest}{jump}"
 
     def __str__(self):
         return f"{self.__contents}" # {repr(self.__jump):^3} {repr(self.__dest):^3} {repr(self.__comp):^8}"

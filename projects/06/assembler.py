@@ -41,6 +41,7 @@ def process_file(args, asm_file_name: str):
                     hack_file.write(stmt.to_machine_code() + '\n')
             if args.verbose:
                 print(f"machine code written to {hack_filename}")
+
 def main():
     """ Entry point to program, using command arguments or STDIN to feed an asm file,
         and various flags used for debugging purposes """

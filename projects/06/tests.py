@@ -69,6 +69,22 @@ class TestBitFields(unittest.TestCase):
             "D|M": "1010101"
         }
         for (comp_st, expected) in possibilities.items():
-            enum = COMP_ST_TO_BITFIELD[comp_st]
-            self.assertEqual(expected, enum.to_machine_code())
+            comp, mode = COMP_ST_TO_BITFIELD[comp_st]
+            self.assertEqual(expected, comp.to_machine_code())
+            self.assertEqual("11", mode.to_machine_code())
 
+    def test_extended_comp(self):
+        # possibilities now include the header(instruction[13] and instruction[14])
+        possibilities = {
+            #       HHa123456
+            "D<<": "010110000",
+            "A<<": "010100000",
+            "M<<": "011100000",
+            "D>>": "010010000",
+            "A>>": "010000000",
+            "M>>": "011000000"
+        }
+        for (comp_st, expected) in possibilities.items():
+            comp, mode = COMP_ST_TO_BITFIELD[comp_st]
+            binary = f"{mode.to_machine_code()}{comp.to_machine_code()}"
+            self.assertEqual(expected, binary, msg=f"while checking {comp_st}")

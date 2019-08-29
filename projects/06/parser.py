@@ -1,7 +1,6 @@
-
 import re
 from typing import List, Optional
-from model import Jump, Comp, Dest, Statement, AInstruction, CInstruction, Label, CompilationError
+from model import Jump, Comp, Dest, Statement, AInstruction, CInstruction, Label, CompilationError, ExtendedALUFlags
 
 COMMENT_REGEX = re.compile(r"//.*")
 WHITESPACE_REGEX = re.compile(r"\s+")
@@ -46,7 +45,7 @@ DEST_ST_TO_BITFIELD = {
     "AMD": Dest.A | Dest.M | Dest.D
 }
 
-# Maps computation strings to comp bitfield
+# Maps computation strings to comp bitfield, tupled with ALU mode as needed
 COMP_ST_TO_BITFIELD = {
     "0": Comp.C1 | Comp.C3 | Comp.C5,
     "1": Comp.C1 | Comp.C2 | Comp.C3 | Comp.C4 | Comp.C5 | Comp.C6,
@@ -76,8 +75,35 @@ COMP_ST_TO_BITFIELD = {
     "D&M": Comp.A,
     "D|A": Comp.C2 | Comp.C4 | Comp.C6,
     "D|M": Comp.C2 | Comp.C4 | Comp.C6 | Comp.A
-
 }
+
+# for commutative operators, add a second form (this doesn't seem to appear in
+# the book, but is supported by course provided assembler)
+
+COMP_ST_TO_BITFIELD["M+D"] = COMP_ST_TO_BITFIELD["D+M"]
+COMP_ST_TO_BITFIELD["M&D"] = COMP_ST_TO_BITFIELD["D&M"]
+COMP_ST_TO_BITFIELD["M|D"] = COMP_ST_TO_BITFIELD["D|M"]
+
+
+COMP_ST_TO_BITFIELD["1+M"] = COMP_ST_TO_BITFIELD["M+1"]
+COMP_ST_TO_BITFIELD["1+D"] = COMP_ST_TO_BITFIELD["D+1"]
+COMP_ST_TO_BITFIELD["1+A"] = COMP_ST_TO_BITFIELD["A+1"]
+
+
+# tuple them with normal ALU operation mode field
+for (st, bitfield) in COMP_ST_TO_BITFIELD.items():
+    COMP_ST_TO_BITFIELD[st] = (bitfield, ExtendedALUFlags.Normal)
+
+# add shift operators
+COMP_ST_TO_BITFIELD.update({
+    "D<<": (Comp.C1 | Comp.C2, ExtendedALUFlags.Shift),
+    "D>>": (Comp.C2, ExtendedALUFlags.Shift),
+    "A<<": (Comp.C1, ExtendedALUFlags.Shift),
+    "A>>": (Comp.NULL, ExtendedALUFlags.Shift),
+    "M<<": (Comp.C1 | Comp.A, ExtendedALUFlags.Shift),
+    "M>>": (Comp.A, ExtendedALUFlags.Shift)
+})
+
 
 
 class StatementParser:
@@ -144,7 +170,7 @@ class CInstructionParser:
 
         if comp_st not in COMP_ST_TO_BITFIELD:
             raise CompilationError(f"Failed to parse CInstruction: unsupported computation \"{comp_st}\" at line {line_number}")
-        comp = COMP_ST_TO_BITFIELD[comp_st]
+        comp, ext = COMP_ST_TO_BITFIELD[comp_st]
 
         return CInstruction(rom_ix, contents=inst, jump=jump, dest=dest,
-                            comp=comp, ext=None)
+                            comp=comp, ext=ext)
