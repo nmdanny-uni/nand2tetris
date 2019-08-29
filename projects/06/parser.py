@@ -36,6 +36,7 @@ JUMP_ST_TO_BITFIELD: Dict[Optional[str], Jump] = {
 
 # Maps strings to dest bitfield
 DEST_ST_TO_BITFIELD = {
+    None: Dest.NULL,
     "M": Dest.M,
     "D": Dest.D,
     "A": Dest.A,
@@ -52,7 +53,30 @@ COMP_ST_TO_BITFIELD = {
     "-1": Comp.C1 | Comp.C2 | Comp.C3 | Comp.C5,
     "D": Comp.C3 | Comp.C4,
     "A": Comp.C1 | Comp.C2,
-    "M": Comp.C1 | Comp.C2 | Comp.A
+    "M": Comp.C1 | Comp.C2 | Comp.A,
+    "!D": Comp.C3 | Comp.C4 | Comp.C6,
+    "!A": Comp.C1 | Comp.C2 | Comp.C6,
+    "!M": Comp.C1 | Comp.C2 | Comp.C6 | Comp.A,
+    "-D": Comp.C3 | Comp.C4 | Comp.C5 | Comp.C6,
+    "-A": Comp.C1 | Comp.C2 | Comp.C5 | Comp.C6,
+    "-M": Comp.C1 | Comp.C2 | Comp.C5 | Comp.C6 | Comp.A,
+    "D+1": Comp.C2 | Comp.C3 | Comp.C4 | Comp.C5 | Comp.C6,
+    "A+1": Comp.C1 | Comp.C2 | Comp.C4 | Comp.C5 | Comp.C6,
+    "M+1": Comp.C1 | Comp.C2 | Comp.C4 | Comp.C5 | Comp.C6 | Comp.A,
+    "D-1": Comp.C3 | Comp.C4 | Comp.C5,
+    "A-1": Comp.C1 | Comp.C2 | Comp.C5,
+    "M-1": Comp.C1 | Comp.C2 | Comp.C5 | Comp.A,
+    "D+A": Comp.C5,
+    "D+M": Comp.C5 | Comp.A,
+    "D-A": Comp.C2 | Comp.C5 | Comp.C6,
+    "D-M": Comp.C2 | Comp.C5 | Comp.C6 | Comp.A,
+    "A-D": Comp.C4 | Comp.C5 | Comp.C6,
+    "M-D": Comp.C4 | Comp.C5 | Comp.C6 | Comp.A,
+    "D&A": Comp.NULL,
+    "D&M": Comp.A,
+    "D|A": Comp.C2 | Comp.C4 | Comp.C6,
+    "D|M": Comp.C2 | Comp.C4 | Comp.C6 | Comp.A
+
 }
 
 

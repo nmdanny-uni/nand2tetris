@@ -28,13 +28,15 @@ class Jump(IntFlag):
 
 class Dest(IntFlag):
     """ A 3-wide bitfield representing the destination of an ALU computation """
-    M = 1,  # d3: memory referenced at A ("M")
-    D = 2,  # d2: D register("D")
-    A = 4,  # d1: A register("A")
+    NULL = 0,  # if value isn't stored anywhere
+    M = 1,     # d3: memory referenced at A ("M")
+    D = 2,     # d2: D register("D")
+    A = 4,     # d1: A register("A")
 
 
 class Comp(IntFlag):
     """ A 7-wide bitfield representing ALU flags """
+    NULL = 0,      # for an and instruction
     C6 = NO = 1,   # negate the output
     C5 = F = 2,    # Add(if present), otherwise And
     C4 = NY = 4,   # negate the second operand
