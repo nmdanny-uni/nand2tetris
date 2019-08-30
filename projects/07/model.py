@@ -1,7 +1,6 @@
 """ This module defines the basic types in the VM specification, namely,
     segments and commands. It also defines other useful types such as
     compilation error class. """
-from pathlib import Path
 
 
 class CompilationError(Exception):
@@ -18,11 +17,14 @@ class Segment:
     def __init__(self, name: str, base_pointer: str):
         """ Creates a segment
         :param name: Name of segment in commands
-        :param base_pointer: RAM location(symbol) of pointer to base of
+        :param base_pointer: RAM location(symbol/address) of pointer to base of
                              segment
         """
         self.__name = name
         self.__base_pointer = base_pointer
+
+    # TODO optimization: if base pointer is an integer(e.g, pointer/temp),
+    # can use direct
 
     def gen_push(self, index: int) -> str:
         """ Generates a push command's ASM using given index"""
@@ -87,8 +89,10 @@ class ConstantSegment(Segment):
 class StaticSegment(Segment):
     """ Static segments are shared within a .vm file """
 
-    def __init__(self, file_name: str):
-        self.__file_name_stripped = Path(file_name).stem
+    def __init__(self, stripped_name: str):
+        """ Creates a static named for file "stripped_name.vm" (that is, the
+            argument is without an extension)"""
+        self.__file_name_stripped = stripped_name
         super().__init__("static", "")
 
     def gen_push(self, index: int) -> str:
