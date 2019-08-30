@@ -31,7 +31,7 @@ class Segment:
         return f"""// push {self.__name} {index}
         @{index}
         D = A
-        @{self.__base_pointer} // D = segment[index]
+        @{self.__base_pointer} // D = segment[{index}]
         A = M + D
         D = M
         @SP // *SP = D
@@ -45,7 +45,7 @@ class Segment:
         """ Generates a pop command's ASM using given index """
         # impl note: this clobbers R13 - don't use it between pop calls
         return f"""// pop {self.__name} {index}
-        @{index}  // R13 = &segment[index]
+        @{index}  // R13 = &segment[{index}]
         D = A
         @{self.__base_pointer}
         D = D + M
@@ -55,7 +55,7 @@ class Segment:
         M = M - 1
         A = M
         D = M
-        @R13 // segment[index] = D
+        @R13 // segment[{index}] = D
         A = M
         M = D
         """
@@ -72,7 +72,7 @@ class ConstantSegment(Segment):
         return f"""// push constant {index}
         @{index}
         D = A
-        @SP // *SP = index
+        @SP // *SP = {index}
         A = M
         M = D
         @SP // SP++
@@ -150,3 +150,47 @@ class Pop(Command):
 
     def to_asm(self) -> str:
         return self.__segment.gen_pop(self.__index)
+
+class UnaryCommand(Command):
+    """ An arithmetic/logical command that pops 1 value from the stack,
+        performs a computation over it and pushes the result to the stack.
+        (Impl note: this doesn't actually push/pop, it is done directly)
+    """
+
+    def __init__(self, name: str, asm_op: str):
+        """ Creates the command with a given name(for debugging purposes),
+            where asm_op is an ASM string containing the computation part
+            using the M register for input """
+        self.__name = name
+        self.__asm_op = asm_op
+
+    def to_asm(self) -> str:
+        return f"""// {self.__name}
+        @SP
+        A = M
+        M = {self.__asm_op}
+        """
+
+
+class BinaryCommand(Command):
+    """ An arithmetic/logical command that pops 2 values from the stack,
+        performs a computation over them and pushes the result to the stack."""
+
+    def __init__(self, name: str, asm_op: str):
+        """ Creates the command with a given name(for debugging purposes),
+            where asm_op is an ASM string containing the computation part
+            where 'M' is the first operand(x), and 'D' is the second one(y).
+        """
+        self.__name = name
+        self.__asm_op = asm_op
+
+    def to_asm(self) -> str:
+        return f"""// {self.__name}
+        @SP
+        M = M - 1
+        A = M
+        D = M // D = y
+        @SP
+        A = M - 1 // this time, don't decrement SP, as we're doing a replacement
+        M = {self.__asm_op}
+        """
