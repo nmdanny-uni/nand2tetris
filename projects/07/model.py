@@ -112,7 +112,7 @@ class StaticSegment(Segment):
         M = M - 1
         A = M
         D = M
-        @{self.__file_name_stripped}.index
+        @{self.__file_name_stripped}.{index}
         M = D
         """
 
