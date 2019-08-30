@@ -10,6 +10,8 @@ COMMAND_FACTORY = CommandFactory()
 
 def process_file(args, vm_file_name: str):
     """ Processes a .vm file """
+    if args.verbose:
+        print(f"Processing {vm_file_name}")
     commands = parse_file(vm_file_name, COMMAND_FACTORY)
     out_asm_file = args.out if args.out else Path(vm_file_name).with_suffix('.asm')
     with open(out_asm_file, 'w') as asm_file:
@@ -41,7 +43,7 @@ def main():
     if Path(args.input).is_dir() and args.out:
         raise ValueError("Can't specify an output path for a directory")
 
-    files = [args.input] if Path(args.input).is_file() else Path(args.input).glob(".vm")
+    files = [args.input] if Path(args.input).is_file() else Path(args.input).glob("*.vm")
     for file in files:
         try:
             process_file(args, file)
