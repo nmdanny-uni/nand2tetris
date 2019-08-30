@@ -14,14 +14,18 @@ class Segment:
         This class allows creation of segments, and generating ASM for push/pop
         operations. """
 
-    def __init__(self, name: str, base_pointer: str):
+    def __init__(self, name: str, base_pointer: str, indirection: bool = True):
         """ Creates a segment
         :param name: Name of segment in commands
-        :param base_pointer: RAM location(symbol/address) of pointer to base of
-                             segment
+        :param base_pointer: RAM location(symbol/address) of (pointer to) base
+                             of segment
+        :param indirection: True if base_pointer is a pointer to base,
+                            False if base_pointer is a base itself
+                            e.g, for temp and pointer segments.
         """
         self.__name = name
         self.__base_pointer = base_pointer
+        self.__indirection = indirection
 
     # TODO optimization: if base pointer is an integer(e.g, pointer/temp),
     # can use direct
@@ -32,7 +36,7 @@ class Segment:
         @{index}
         D = A
         @{self.__base_pointer} // D = segment[{index}]
-        A = M + D
+        A = {'M + D' if self.__indirection else 'A + D'}
         D = M
         @SP // *SP = D
         A = M
@@ -48,10 +52,10 @@ class Segment:
         @{index}  // R13 = &segment[{index}]
         D = A
         @{self.__base_pointer}
-        D = D + M
+        D = {'D + M' if self.__indirection else 'D + A'}
         @R13
         M = D
-        @SP // D = *(SP--)
+        @SP // SP--; D = *SP
         M = M - 1
         A = M
         D = M

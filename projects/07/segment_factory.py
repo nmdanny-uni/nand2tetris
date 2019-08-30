@@ -15,10 +15,10 @@ class SegmentFactory:
             "argument": Segment("argument", "ARG"),
             "local": Segment("local", "LCL"),
             "constant": ConstantSegment(),
+            "pointer": Segment("pointer", "THIS", indirection=False),
             "this": Segment("this", "THIS"),
             "that": Segment("that", "THAT"),
-            "pointer": Segment("pointer", "3"),  # indices 3-4
-            "temp": Segment("temp", "5")   # indices 5-12
+            "temp": Segment("temp", "R5", indirection=False)
         }
         self.__static_segments = {}
 
