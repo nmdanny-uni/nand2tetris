@@ -2,6 +2,7 @@
     segments and commands. It also defines other useful types such as
     compilation error class. """
 
+from enum import Enum
 
 class CompilationError(Exception):
     pass
@@ -26,9 +27,6 @@ class Segment:
         self.__name = name
         self.__base_pointer = base_pointer
         self.__indirection = indirection
-
-    # TODO optimization: if base pointer is an integer(e.g, pointer/temp),
-    # can use direct
 
     def gen_push(self, index: int) -> str:
         """ Generates a push command's ASM using given index"""
@@ -103,7 +101,7 @@ class StaticSegment(Segment):
         return f"""// push static {index}
         @{self.__file_name_stripped}.{index}
         D = M
-        @SP // *SP = D
+        @SP  // *SP = D
         A = M
         M = D
         @ SP // SP++
@@ -171,7 +169,7 @@ class UnaryCommand(Command):
     def to_asm(self) -> str:
         return f"""// {self.__name}
         @SP
-        A = M
+        A = M - 1
         M = {self.__asm_op}
         """
 
@@ -198,3 +196,62 @@ class BinaryCommand(Command):
         A = M - 1 // this time, don't decrement SP, as we're doing a replacement
         M = {self.__asm_op}
         """
+
+
+class CompareType(Enum):
+    """ What kind of comparison operation we want"""
+    LT = 1,
+    EQ = 2,
+    GT = 3
+
+    def to_asm(self) -> str:
+        """ Returns ASM jump instruction, in case comparison result
+            for `x CompareType y` is true """
+        # at this point, D = x - y
+        if self is CompareType.EQ:
+            return "JEQ"  # x=y iff D=0
+        if self is CompareType.LT:
+            return "JLT"  # x<y iff D<0
+        return "JGT"  # x>y iff D>0
+
+
+class CompareCommand(Command):
+    """ An equal/greater/less than command, depending on the passed
+        compare_type """
+
+    # Used to create unique labels for jump labels
+    Counter = 0
+
+    def __init__(self, name: str, compare_type: CompareType):
+        self.__name = name
+        self.__compare_type = compare_type
+
+    def to_asm(self) -> str:
+        CompareCommand.Counter += 1
+
+        return f"""// {self.__name}
+        @SP
+        M = M - 1
+        A = M
+        D = M  // D = y
+        @SP
+        A = M - 1 // this time, don't decrement SP, as we're doing a replacement
+        D = M - D // D = x - y
+
+
+        @IF_TRUE_{CompareCommand.Counter}
+        D; {self.__compare_type.to_asm()}
+        @SP // otherwise, push false(0) to stack(by doing a replacement)
+        A = M - 1
+        M = 0
+        @CONTINUE_{CompareCommand.Counter}
+        0; JMP // in order to not enter the ifTrue portion
+
+        (IF_TRUE_{CompareCommand.Counter})
+        @SP
+        A = M - 1
+        M = -1 // push true(-1=0b1...11) to stack(by doing a replacement)
+
+        (CONTINUE_{CompareCommand.Counter})
+        """
+

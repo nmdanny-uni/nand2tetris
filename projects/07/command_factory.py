@@ -1,7 +1,8 @@
 """ This module is responsible for creating commands, it is essentially a
     parsing class. """
 
-from model import CompilationError, Command, Push, Pop, UnaryCommand, BinaryCommand
+from model import (CompilationError, Command, Push, Pop, UnaryCommand,
+                   BinaryCommand, CompareCommand, CompareType)
 from segment_factory import SegmentFactory
 
 class CommandFactory:
@@ -13,7 +14,10 @@ class CommandFactory:
         "add": BinaryCommand("add", "M + D"),
         "sub": BinaryCommand("sub", "M - D"),
         "and": BinaryCommand("and", "M & D"),
-        "or": BinaryCommand("or", "M | D")
+        "or": BinaryCommand("or", "M | D"),
+        "eq": CompareCommand("eq", CompareType.EQ),
+        "gt": CompareCommand("gt", CompareType.GT),
+        "lt": CompareCommand("lt", CompareType.LT)
     }
     
     def __init__(self):
@@ -34,3 +38,5 @@ class CommandFactory:
             if not parts[0] in CommandFactory.Commands:
                 raise CompilationError(f"Unknown command \"{parts[0]}\" at line {line_num}")
             return CommandFactory.Commands[parts[0]]
+
+        raise CompilationError("Unrecognized command format \"{line}\"line {line__num}")
