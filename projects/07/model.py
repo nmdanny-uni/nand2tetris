@@ -54,8 +54,7 @@ class Segment:
         @R13
         M = D
         @SP // SP--; D = *SP
-        M = M - 1
-        A = M
+        AM = M - 1
         D = M
         @R13 // segment[{index}] = D
         A = M
@@ -111,8 +110,7 @@ class StaticSegment(Segment):
     def gen_pop(self, index) -> str:
         return f"""// pop static {index}
         @SP // D = *(SP--)
-        M = M - 1
-        A = M
+        AM = M - 1
         D = M
         @{self.__file_name_stripped}.{index}
         M = D
@@ -189,8 +187,7 @@ class BinaryCommand(Command):
     def to_asm(self) -> str:
         return f"""// {self.__name}
         @SP
-        M = M - 1
-        A = M
+        AM = M - 1
         D = M // D = y
         @SP
         A = M - 1 // this time, don't decrement SP, as we're doing a replacement
@@ -231,8 +228,7 @@ class CompareCommand(Command):
 
         return f"""// {self.__name}
         @SP
-        M = M - 1
-        A = M
+        AM = M - 1
         D = M  // D = y
         @SP
         A = M - 1 // this time, don't decrement SP, as we're doing a replacement
