@@ -7,39 +7,39 @@
 // on the stack. 
 push constant 17
 push constant 17
-eq
+eq  // true(-1)
 push constant 17
 push constant 16
-eq
+eq // false(0)
 push constant 16
 push constant 17
-eq
+eq // false(0)
 push constant 892
 push constant 891
-lt
+lt // false(0)
 push constant 891
 push constant 892
-lt
+lt // true(-1)
 push constant 891
 push constant 891
-lt
+lt                      // false(0)
 push constant 32767
 push constant 32766
-gt
+gt                      // true. so far we have (-1,0,0,0,-1,0,-1)
 push constant 32766
-push constant 32767
-gt
+push constant 32767   
+gt                      // false (0)
 push constant 32766
 push constant 32766
-gt
+gt                      // false (0), stack is now : (1, 0, 0, 0, -1, 0, -1, 0, 0)
 push constant 57
 push constant 31
 push constant 53
-add
+add                    // now stack should be:  (-1, 0, 0, 0, -1, 0, -1, 0, 0, 57, 84)
 push constant 112
-sub
-neg
-and
+sub                    // stack should now be (-1, 0, 0, 0, -1, 0, -1, 0, 0, 57, 28)
+neg                    // stack should now be (-1, 0, 0, 0, -1, 0, -1, 0, 0, 57, -28)
+and         // should now include 32 (indeed)
 push constant 82
-or
+or          // 32 or 82 = 114
 not
