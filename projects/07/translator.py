@@ -2,8 +2,7 @@ import argparse
 from model import CompilationError
 import sys
 import logging
-from command_factory import CommandFactory, TranslationContext
-
+from translation_context import TranslationContext
 
 def main():
     """ Entry point to program, using command arguments or STDIN to feed an asm file,
