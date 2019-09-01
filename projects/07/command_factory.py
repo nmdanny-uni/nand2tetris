@@ -3,6 +3,7 @@
 from typing import Iterator, Optional
 from model import (CompilationError, Command, Push, Pop, UnaryCommand,
                    BinaryCommand, CompareCommand, CompareType,
+                   LabelCommand, GotoCommand, IfGotoCommand,
                    FunctionDefinition)
 from segment_factory import SegmentFactory
 from pathlib import Path
@@ -79,7 +80,10 @@ class TranslationContext:
         for file_name in self.__files:
             logging.info(f"processing {file_name}")
             with open(file_name, 'r') as vm_f:
-                cur_function = None
+                # by the hack spec, each file must begin with a function
+                # however, some .vm files from ex7 and ex8 do not follow
+                # this, hence we put them in an implicit function
+                cur_function = "NO_FUNCTION"
                 contents = vm_f.read()
                 for (line_num, line) in enumerate(tokenize(contents)):
                     command = self.__command_factory.parse_line(str(file_name),
@@ -95,6 +99,8 @@ class CommandFactory:
         parsing class (though it isn't purely a parser, it also provides some
         semantic context for the parsed objects, such as their function)"""
 
+    # Maps keywords to more primitive commands(that don't require
+    #  context such as function name, or have any arguments)
     Commands = {
         "neg": UnaryCommand("neg", "-M"),
         "not": UnaryCommand("not", "!M"),
@@ -104,16 +110,27 @@ class CommandFactory:
         "or": BinaryCommand("or", "M | D"),
         "eq": CompareCommand("eq", CompareType.EQ),
         "gt": CompareCommand("gt", CompareType.GT),
-        "lt": CompareCommand("lt", CompareType.LT)
+        "lt": CompareCommand("lt", CompareType.LT),
+    }
+
+    # Branching commands(ex8) that take a parameter, thus we
+    # map these strings to those constructors
+    ArgCommands = {
+        "label": LabelCommand,
+        "goto": GotoCommand,
+        "if-goto": IfGotoCommand
     }
 
     def __init__(self):
         self.__segment_factory = SegmentFactory()
 
+
     def parse_line(self, file_name: str, function_name: Optional[str],
                    line: str, line_num: int) -> Command:
         """ Parses a line, returning an appropriate command. """
         parts = line.split(sep=" ")
+
+        # a push/pop with a segment part
         if len(parts) == 3:
             segment = self.__segment_factory.get_segment(file_name, parts[1])
             if not parts[2].isdigit():
@@ -122,9 +139,19 @@ class CommandFactory:
                 return Push(segment, int(parts[2]))
             return Pop(segment, int(parts[2]))
 
-        if len(parts) == 1:
-            if not parts[0] in CommandFactory.Commands:
-                raise CompilationError(f"Unknown command \"{parts[0]}\" at line {line_num}")
-            return CommandFactory.Commands[parts[0]]
+        # goto/if-goto/label command (takes an argument)
+        if len(parts) == 2:
+            if not function_name:
+                raise CompilationError("label must live in a function")
+            label_name = parts[1]
+            return CommandFactory.ArgCommands[parts[0]](function_name, label_name)
 
-        raise CompilationError(f"Unrecognized command format \"{line}\" at line {line_num}")
+        # either a primitive command, or a call/return or a function definition
+        if len(parts) == 1:
+            if parts[0] == "(" and parts[-1] == ")":
+                return FunctionDefinition(parts[0][1:-1])
+
+            if parts[0] in CommandFactory.Commands:
+                return CommandFactory.Commands[parts[0]]
+
+        raise CompilationError(f"Unrecognized command \"{line}\" at line {line_num}")
