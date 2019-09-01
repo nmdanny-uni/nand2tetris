@@ -309,14 +309,59 @@ class GotoCommand(Command):
 
 
 class FunctionDefinition(Command):
-    """ A function definition """
+    """ A function definition. """
 
-    def __init__(self, function_name: str):
+    def __init__(self, function_name: str, num_args: int):
+        """
+        :param function_name: The name of the function being defined
+        :param num_args: Number of arguments used by this function
+        """
         self.__function_name = function_name
+        self.__num_args = num_args
 
     def to_asm(self) -> str:
-        return f"""({self.__function_name})"""
+        return f"""// function {self.__function_name} {self.__num_args}
+        ({self.__function_name})
+        // TODO repeat num_args times, a loop which zeroes the local args
+        """
 
     @property
     def function_name(self) -> str:
         return self.__function_name
+
+    @property
+    def num_args(self) -> int:
+        return self.__num_args
+
+
+class Call(Command):
+    """ A function call command """
+
+    def __init__(self, caller_function_name: str,
+                 callee_function_name: str,
+                 num_args: int):
+        """
+        :param caller_function_name: The function in which the call is invoked
+        :param callee_function_name: The name of the function being invoked
+        :param num_args: Number of args to be passed to the function """
+        self.__caller_function_name = caller_function_name
+        self.__callee_function_name = callee_function_name
+        self.__num_args = num_args
+
+    def to_asm(self) -> str:
+        return f"""// call {self.__callee_function_name} {self.__num_args} (at {self.__caller_function_name})
+        // TODO impl Call
+        """
+
+class Return(Command):
+    """ A function return command """
+
+    def __init__(self, function_name: str):
+        """
+        :param function_name: Name of function where this command appears """
+        self.__function_name = function_name
+
+    def to_asm(self) -> str:
+        return f"""// return (within {self.__function_name})
+        // TODO impl Return
+        """

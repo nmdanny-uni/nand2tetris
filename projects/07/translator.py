@@ -4,9 +4,6 @@ import sys
 import logging
 from command_factory import CommandFactory, TranslationContext
 
-# Set to TRUE for Ex8
-USE_BOOTSTRAP = True
-
 
 def main():
     """ Entry point to program, using command arguments or STDIN to feed an asm file,
@@ -15,6 +12,9 @@ def main():
     argparser.add_argument(
         'input',
         help='A .vm file, or a directory with .vm files')
+
+    argparser.add_argument('-b', '--bootstrap', action='store_true',
+                           help='include bootstrap code')
 
     #### the following arguments are for debugging/convenience, not part of the project usage ###
 
@@ -25,7 +25,7 @@ def main():
     args = argparser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR)
-    ctx = TranslationContext(USE_BOOTSTRAP, args.input)
+    ctx = TranslationContext(args.bootstrap, args.input)
     ctx.write_asm_file()
 
 if __name__ == '__main__':

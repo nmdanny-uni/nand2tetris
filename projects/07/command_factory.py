@@ -4,7 +4,7 @@ from typing import Iterator, Optional
 from model import (CompilationError, Command, Push, Pop, UnaryCommand,
                    BinaryCommand, CompareCommand, CompareType,
                    LabelCommand, GotoCommand, IfGotoCommand,
-                   FunctionDefinition)
+                   FunctionDefinition, Call, Return)
 from segment_factory import SegmentFactory
 from pathlib import Path
 import re
@@ -32,6 +32,9 @@ def tokenize(vm: str) -> Iterator[str]:
             yield line
 
 
+# Where on the Hack platform should the stack pointer be initialized to?
+DEFAULT_SP_LOCATION = 256
+
 class TranslationContext:
     """ This class drives the VM translation process of a file/directory
         It uses CommandFactory to actually create the Command objects(which
@@ -53,10 +56,13 @@ class TranslationContext:
         root = Path(file_or_dir)
         if root.is_file():
             self.__files = [root]
+            self.__out_asm_file = root.with_suffix('.asm') 
         else:
             self.__files = list(root.glob("*.vm"))
-        self.__out_asm_file = root.with_suffix('.asm')
-        logging.info(f"Translating {root} with {len(self.__files)} files ")
+            self.__out_asm_file = root / Path(root.stem).with_suffix('.asm')
+
+        logging.info(f"Translating {root} with {len(self.__files)} files."
+                     f"Is using bootstrap: {do_bootstrap}")
 
     def write_asm_file(self):
         """ Creates an output asm file"""
@@ -68,10 +74,13 @@ class TranslationContext:
                 out_file.write(line)
 
     def __gen_bootstrap(self) -> str:
-        return f"""// bootstrap code
-        // TODO
-        """
-    
+        return f"""// beginning of bootstrap code
+        @{DEFAULT_SP_LOCATION}
+        D = A
+        @SP
+        M = D 
+        """ + Call("BOOTSTRAP_FUNCTION", "Sys.init", 0).to_asm()
+
     def to_asm(self) -> Iterator[str]:
         """ Generates asm code """
         if self.__do_bootstrap:
@@ -80,6 +89,7 @@ class TranslationContext:
         for file_name in self.__files:
             logging.info(f"processing {file_name}")
             with open(file_name, 'r') as vm_f:
+                yield f"// processing {file_name}"
                 # by the hack spec, each file must begin with a function
                 # however, some .vm files from ex7 and ex8 do not follow
                 # this, hence we put them in an implicit function
@@ -124,20 +134,29 @@ class CommandFactory:
     def __init__(self):
         self.__segment_factory = SegmentFactory()
 
-
-    def parse_line(self, file_name: str, function_name: Optional[str],
+    def parse_line(self, file_name: str, function_name: str,
                    line: str, line_num: int) -> Command:
         """ Parses a line, returning an appropriate command. """
         parts = line.split(sep=" ")
 
-        # a push/pop with a segment part
+        # a push/pop with a segment part, or a call command
         if len(parts) == 3:
-            segment = self.__segment_factory.get_segment(file_name, parts[1])
+
             if not parts[2].isdigit():
-                raise CompilationError(f"expected integer at line {line_num}, got \"{parts[2]}\" instead.")
+                raise CompilationError(f"when parsing push/pop/call, expected integer at line {line_num}"
+                                       f" got \"{parts[2]}\" instead.")
+
+            if parts[0] == "call":
+                return Call(function_name, parts[1], int(parts[2]))
+
+            elif parts[0] == "function":
+                return FunctionDefinition(parts[1], int(parts[2]))
+            
+            segment = self.__segment_factory.get_segment(file_name, parts[1])
             if parts[0] == "push":
                 return Push(segment, int(parts[2]))
-            return Pop(segment, int(parts[2]))
+            elif parts[0] == "pop":
+                return Pop(segment, int(parts[2]))
 
         # goto/if-goto/label command (takes an argument)
         if len(parts) == 2:
@@ -146,12 +165,12 @@ class CommandFactory:
             label_name = parts[1]
             return CommandFactory.ArgCommands[parts[0]](function_name, label_name)
 
-        # either a primitive command, or a call/return or a function definition
+        # either a primitive command, or a call/return 
         if len(parts) == 1:
-            if parts[0] == "(" and parts[-1] == ")":
-                return FunctionDefinition(parts[0][1:-1])
-
             if parts[0] in CommandFactory.Commands:
                 return CommandFactory.Commands[parts[0]]
+
+            if parts[0] == "return":
+                return Return(function_name)
 
         raise CompilationError(f"Unrecognized command \"{line}\" at line {line_num}")
