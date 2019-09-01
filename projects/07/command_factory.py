@@ -71,14 +71,14 @@ class TranslationContext:
         with open(self.__out_asm_file, 'w') as out_file:
             for line in self.to_asm():
                 logging.debug(line)
-                out_file.write(line)
+                out_file.write(line.strip()+'\n')
 
     def __gen_bootstrap(self) -> str:
         return f"""// beginning of bootstrap code
         @{DEFAULT_SP_LOCATION}
         D = A
         @SP
-        M = D 
+        M = D
         """ + Call("BOOTSTRAP_FUNCTION", "Sys.init", 0).to_asm()
 
     def to_asm(self) -> Iterator[str]:
