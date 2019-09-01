@@ -7,7 +7,6 @@ from enum import Enum
 class CompilationError(Exception):
     pass
 
-
 class Segment:
 
     """ A segment is an abstraction over RAM, allowing to generate ASM code for
@@ -251,3 +250,73 @@ class CompareCommand(Command):
         (CONTINUE_{CompareCommand.Counter})
         """
 
+
+class LabelCommand(Command):
+    """ A label command """
+
+    def __init__(self, function_name: str, label_name: str):
+        """
+        :param file_name: Function name in which the label was found
+        :param label_name: The label string, as defined in the .vm file """
+        self.__function_name = function_name
+        self.__label_name = label_name
+
+    def to_asm(self) -> str:
+        return f"""// label {self.__label_name}
+        ({self.__function_name}${self.__label_name})
+        """
+
+class IfGotoCommand(Command):
+    """ A conditional branch command """
+
+    def __init__(self, function_name: str, label_name: str):
+        """
+        :param function_name: Function in which the goto command was found
+        :param label_name: The label string, as defined in the .vm file.
+                           label must be in the same function """
+        self.__function_name = function_name
+        self.__label_name = label_name
+
+    def to_asm(self) -> str:
+        # remember that true = -1, false=0
+        # thus, we jump whenever stack head is != 0, that is, JNE
+        return f"""// if-goto {self.__label_name}
+        // pop boolean onto D
+        @SP
+        AM = M - 1
+        D = M
+        @{self.__function_name}${self.__label_name}
+        D; JNE
+        """
+
+
+class GotoCommand(Command):
+    """ A branching statement"""
+
+    def __init__(self, function_name: str, label_name: str):
+        """
+        :param function_name: Function in which the goto command was found
+        :param label_name: The label string, as defined in the .vm file.
+                           label must be in the same function """
+        self.__function_name = function_name
+        self.__label_name = label_name
+
+    def to_asm(self) -> str:
+        return f"""// goto {self.__label_name}
+        @{self.__function_name}${self.__label_name}
+        0; JMP
+        """
+
+
+class FunctionDefinition(Command):
+    """ A function definition """
+
+    def __init__(self, function_name: str):
+        self.__function_name = function_name
+
+    def to_asm(self) -> str:
+        return f"""({self.__function_name})"""
+
+    @property
+    def function_name(self) -> str:
+        return self.__function_name
