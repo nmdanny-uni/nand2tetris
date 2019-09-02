@@ -1,6 +1,15 @@
 """ This module defines the basic types in the VM specification, namely,
     segments and commands. It also defines other useful types such as
-    compilation error class. """
+    compilation error class.
+
+    These classes have the sole purpose of generating .asm code strings, they
+    are similar to many of the functions in the suggested 'CodeWriter' module,
+    but organized via classes - I believe this improves readability, and makes
+    it easy to use various helper methods(or other classes, as with Segment) to
+    shorten code. It is also more extensible, one can easily support more types
+    of commands by adding them here, and adding parsing functionality to the
+    command factory.
+"""
 
 from enum import Enum
 
@@ -10,11 +19,13 @@ class CompilationError(Exception):
 
 
 class Segment:
+    """ This is essentially a helper class hierarchy used to generate ASM code
+        needed for Push/Pop operations, depending on the arguments passed
+        via constructor
 
-    """ A segment is an abstraction over RAM, allowing to generate ASM code for
-        pushing and popping values to it.
-        This class allows creation of segments, and generating ASM for push/pop
-        operations. """
+        A segment is an abstraction of RAM, allowing to treat a segment in the
+        RAM as an array, and is accessible via the base pointer - directly or
+        via a dereference. """
 
     def __init__(self, name: str, base_pointer: str, indirection: bool = True):
         """ Creates a segment
@@ -89,7 +100,8 @@ class ConstantSegment(Segment):
 
 
 class StaticSegment(Segment):
-    """ Static segments are shared within a .vm file """
+    """ Static segments are shared within a .vm file. (The SegmentFactory
+        is responsible for enforcing that) """
 
     def __init__(self, stripped_name: str):
         """ Creates a static named for file "stripped_name.vm" (that is, the
@@ -118,12 +130,8 @@ class StaticSegment(Segment):
         """
 
 
-
 class Command:
     """ A parsed VM command """
-
-    def __init__(self):
-        pass
 
     def to_asm(self) -> str:
         """ Converts the VM command to ASM """
@@ -193,7 +201,7 @@ class BinaryCommand(Command):
         AM = M - 1
         D = M // D = y
         @SP
-        A = M - 1 // this time, don't decrement SP, as we're doing a replacement
+        A = M - 1 // now we don't decrement SP, as we're doing a replacement
         M = {self.__asm_op}
         """
 
@@ -234,7 +242,7 @@ class CompareCommand(Command):
         AM = M - 1
         D = M  // D = y
         @SP
-        A = M - 1 // this time, don't decrement SP, as we're doing a replacement
+        A = M - 1 // now we don't decrement SP, as we're doing a replacement
         D = M - D // D = x - y
 
 
@@ -270,8 +278,10 @@ class LabelCommand(Command):
         ({self.__function_name}${self.__label_name})
         """
 
+
 class IfGotoCommand(Command):
-    """ A conditional branch command """
+    """ A conditional branch command, jumping to a label if the
+        head of the stack is true. """
 
     def __init__(self, function_name: str, label_name: str):
         """
@@ -295,7 +305,7 @@ class IfGotoCommand(Command):
 
 
 class GotoCommand(Command):
-    """ A branching statement"""
+    """ A branch command, jumping to a label."""
 
     def __init__(self, function_name: str, label_name: str):
         """
@@ -313,20 +323,25 @@ class GotoCommand(Command):
 
 
 class FunctionDefinition(Command):
-    """ A function definition. """
+    """ A function definition command. """
 
     def __init__(self, file_name: str, function_name: str, num_args: int):
         """
         :param file_name: File name where this function is located
         :param function_name: The name of the function being defined
-        :param num_args: Number of arguments used by this function
+        :param num_args: Number of local arguments used by this function
         """
         self.__file_name = file_name
         self.__function_name = function_name
         self.__num_args = num_args
 
     def __initialize_locals(self) -> str:
-        """ Create the ASM strnig for initilization n-args locals to 0 """
+        """ Create the ASM code for initializing num_args locals to 0. """
+        # this relies on the fact that in the Hack platform, the locals are
+        # on the global stack, specifically, after the caller function's saved
+        # state(this function's LCL), and since this code is accessed after
+        # the Call command finishes, SP(=LCL) will indeed point at the first
+        # free memory space for a local.
         push_zero = f"""// push zero
         @SP
         A = M
@@ -345,10 +360,6 @@ class FunctionDefinition(Command):
     @property
     def function_name(self) -> str:
         return self.__function_name
-
-    @property
-    def num_args(self) -> int:
-        return self.__num_args
 
 
 class Call(Command):
@@ -370,8 +381,9 @@ class Call(Command):
         Call.Counter += 1
 
     def __push_symbol_to_stack(self, symbol: str, indirection: bool = True) -> str:
-        """ Pushes a given symbol(or its dereferenced value) to stack,
-            depending on the indirection parameter """
+        """ Creates ASM code for pushing a given symbol to stack, either
+            directly or its dereferenced value, depending on the 'indirection'
+            parameter. """
         return f"""
         @{symbol}
         D = {'M' if indirection else 'A'}
@@ -383,8 +395,10 @@ class Call(Command):
         """
 
     def __get_return_address(self) -> str:
+        """ This method determines the format of the return address
+            from a called function, for this call. (Unique among all calls)"""
         return f"""return_to_{self.__caller_function_name}__{Call.Counter}"""
-    
+
     def to_asm(self) -> str:
         return f"""// call {self.__callee_function_name} {self.__num_args})
         // push caller's return address
@@ -450,8 +464,7 @@ class Return(Command):
         {self.__set_symbol_to_deref_frame('R14', 5)}
 
         @SP
-        M = M - 1
-        A = M
+        AM = M - 1
         D = M
         @ARG
         A = M

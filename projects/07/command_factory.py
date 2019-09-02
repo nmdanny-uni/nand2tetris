@@ -10,7 +10,9 @@ from segment_factory import SegmentFactory
 class CommandFactory:
     """ Responsible for creating command instances. This is essentially a
         parsing class (though it isn't purely a parser, it also provides some
-        semantic context for the parsed objects, such as their function)"""
+        semantic context for the parsed objects, such as their current
+        function scope, this is necessary for branching and function call
+        commands)"""
 
     # Maps keywords to more primitive commands(that don't require
     #  context such as function name, or have any arguments)

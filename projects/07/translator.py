@@ -15,12 +15,11 @@ def main():
     argparser.add_argument('-b', '--bootstrap', action='store_true',
                            help='include bootstrap code')
 
-    #### the following arguments are for debugging/convenience, not part of the project usage ###
-
+    # we use python's logging class to print debug statements, which are
+    # ignored when not in verbose mode (so they won't bother any auto-testers)
     argparser.add_argument('-v', '--verbose',
                            action='store_true',
                            help='print to STDOUT the asm along with debug information')
-    #############################################################################################
     args = argparser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR)
