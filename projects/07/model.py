@@ -4,8 +4,10 @@
 
 from enum import Enum
 
+
 class CompilationError(Exception):
     pass
+
 
 class Segment:
 
@@ -116,6 +118,7 @@ class StaticSegment(Segment):
         """
 
 
+
 class Command:
     """ A parsed VM command """
 
@@ -149,6 +152,7 @@ class Pop(Command):
 
     def to_asm(self) -> str:
         return self.__segment.gen_pop(self.__index)
+
 
 class UnaryCommand(Command):
     """ An arithmetic/logical command that pops 1 value from the stack,
@@ -311,18 +315,31 @@ class GotoCommand(Command):
 class FunctionDefinition(Command):
     """ A function definition. """
 
-    def __init__(self, function_name: str, num_args: int):
+    def __init__(self, file_name: str, function_name: str, num_args: int):
         """
+        :param file_name: File name where this function is located
         :param function_name: The name of the function being defined
         :param num_args: Number of arguments used by this function
         """
+        self.__file_name = file_name
         self.__function_name = function_name
         self.__num_args = num_args
+
+    def __initialize_locals(self) -> str:
+        """ Create the ASM strnig for initilization n-args locals to 0 """
+        push_zero = f"""// push zero
+        @SP
+        A = M
+        M = 0
+        @SP
+        M = M + 1
+        """
+        return "".join([push_zero] * self.__num_args)
 
     def to_asm(self) -> str:
         return f"""// function {self.__function_name} {self.__num_args}
         ({self.__function_name})
-        // TODO repeat num_args times, a loop which zeroes the local args
+        {self.__initialize_locals()}
         """
 
     @property
@@ -337,6 +354,9 @@ class FunctionDefinition(Command):
 class Call(Command):
     """ A function call command """
 
+    # Used to create unique return labels
+    Counter = 0
+
     def __init__(self, caller_function_name: str,
                  callee_function_name: str,
                  num_args: int):
@@ -347,11 +367,62 @@ class Call(Command):
         self.__caller_function_name = caller_function_name
         self.__callee_function_name = callee_function_name
         self.__num_args = num_args
+        Call.Counter += 1
 
-    def to_asm(self) -> str:
-        return f"""// call {self.__callee_function_name} {self.__num_args} (at {self.__caller_function_name})
-        // TODO impl Call
+    def __push_symbol_to_stack(self, symbol: str, indirection: bool = True) -> str:
+        """ Pushes a given symbol(or its dereferenced value) to stack,
+            depending on the indirection parameter """
+        return f"""
+        @{symbol}
+        D = {'M' if indirection else 'A'}
+        @SP
+        A = M
+        M = D
+        @SP
+        M = M + 1
         """
+
+    def __get_return_address(self) -> str:
+        return f"""return_to_{self.__caller_function_name}__{Call.Counter}"""
+    
+    def to_asm(self) -> str:
+        return f"""// call {self.__callee_function_name} {self.__num_args})
+        // push caller's return address
+        // note, unlike the following, the address is accessible directly(
+        // it is a label, it doesn't require a dereferencing)
+        {self.__push_symbol_to_stack(self.__get_return_address(), False)}
+        // push caller's LCL
+        {self.__push_symbol_to_stack('LCL')}
+        // push caller's ARG
+        {self.__push_symbol_to_stack('ARG')}
+        // push caller's THIS
+        {self.__push_symbol_to_stack('THIS')}
+        // push caller's THAT
+        {self.__push_symbol_to_stack('THAT')}
+
+        // Update callee ARG
+        @{self.__num_args}
+        D = -A // D = -n
+        @5
+        D = D - A // D = -n-5
+        @SP
+        D = M + D // D = SP-n-5
+        @ARG
+        M = D // ARG = SP-n-5 (no deref, we're updating pointers)
+
+        // Update callee LCL
+        @SP
+        D = M
+        @LCL
+        M = D // LCL = SP (no deref, we're updating pointers)
+
+        // goto called function
+        @{self.__callee_function_name}
+        0; JMP
+
+        ({self.__get_return_address()})
+        """
+
 
 class Return(Command):
     """ A function return command """
@@ -361,7 +432,42 @@ class Return(Command):
         :param function_name: Name of function where this command appears """
         self.__function_name = function_name
 
+    def __set_symbol_to_deref_frame(self, symbol: str, ix: int) -> str:
+        """ Performs symbol = *(LCL - ix), returning ASM """
+        return f"""
+        @{ix}
+        D = A
+        @LCL
+        A = M - D
+        D = M // D = *(LCL + ix)
+        @{symbol}
+        M = D // symbol = *(LCL + ix)
+        """
+
     def to_asm(self) -> str:
         return f"""// return (within {self.__function_name})
-        // TODO impl Return
+        // store ret addr in R14
+        {self.__set_symbol_to_deref_frame('R14', 5)}
+
+        @SP
+        M = M - 1
+        A = M
+        D = M
+        @ARG
+        A = M
+        M = D // *ARG = *(pop())
+
+        @ARG
+        D = M
+        @SP
+        M = D+1 // SP = ARG+1  (no deref, updating pointers)
+
+        {self.__set_symbol_to_deref_frame('THAT', 1)}
+        {self.__set_symbol_to_deref_frame('THIS', 2)}
+        {self.__set_symbol_to_deref_frame('ARG', 3)}
+        {self.__set_symbol_to_deref_frame('LCL', 4)}
+
+        @R14
+        A = M
+        0; JMP // goto RET
         """

@@ -53,7 +53,7 @@ class CommandFactory:
                 return Call(function_name, parts[1], int(parts[2]))
 
             elif parts[0] == "function":
-                return FunctionDefinition(parts[1], int(parts[2]))
+                return FunctionDefinition(file_name, parts[1], int(parts[2]))
 
             segment = self.__segment_factory.get_segment(file_name, parts[1])
             if parts[0] == "push":
