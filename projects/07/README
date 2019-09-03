@@ -1,0 +1,77 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Projects 7 & 8 - implementation of VM translator in Python
+                           ----------------------- 
+  
+
+Submitted Files
+
+
+.
+|-- command_factory.py     Parsing class, responsible for creating Command instances
+|-- Makefile               Makefile
+|-- model.py               Defines the Command, Segment classes(and many subclasses)
+|-- README                 This file
+|-- segment_factory.py     Responsible for creating Segment instances
+|-- translation_context.py Drives the translation process
+|-- translator.py          Contains main & argument parsing
+`-- VMtranslator           Executable
+
+
+Design & Overview
+------
+The 'model.py' contains some of the most important class hierarchies:
+
+- Command
+A command is any VM instruction(one line) and has a 'to_asm' method which lets
+it be translated to ASM code(string). Some commands take arguments at parse
+time, such as the Push/Pop commands, which take a 'Segment' class
+
+- Segment
+A segment is basically a helper class for generating Push/Pop commands, depending
+on the type of segment(e.g, static, constant, normal, etc..). It is passed as
+argument A Push/Pop command constructor and does most of the work.
+
+These classes fulfill the same role as the various methods in the suggested 'CodeWriter'
+design, but I believe that splitting them to different classes improves readability and
+extensibility: we can add various helper methods(or helper classes, as with the Segment
+class) to specific ommand, making it clear where it belongs to. We can add new commands,
+and we only need to change the 'command_factory' to support them.
+
+
+- Command factory (command_factory.py)
+This class is responsible for parsing lines in the .VM file, and creating Command
+instances for each line. 
+
+- Segment factory (segment_factory.py)
+This class is responsible for creating segment instances according to a given segment
+string and file. It ensures that each file has it's own static segment, but all files
+share the other segments.
+
+- TranslationContext (translation_context.py)
+This is the main class that drives the translation process. It is responsible for reading
+a VM file/directory, stripping whitespace and comments from the lines and passing them to
+the command factory. It does so while maintaining state(current file & current function)
+which is needed for some of the functions. Moreover, it genereates bootstrap code if
+instructed to.
+
+- Main (translator.py)
+This is the program's entry point. It is responsible for parsing arguments, and setting
+up logging depending on the passed in flags. 
+
+Remarks & Implementation notes
+-------
+- Both ex7 and ex8 are implemented with the same project. The main difference is
+  generation of bootstrap code, which may be enabled via the -b flag. Thus, the
+  executable 'VMtranslator' may or may not pass this flag, depending if this is
+  ex7 or ex8 submission.
+
+- Beginning with ex8, we are told that all .VM files begin with a function. This
+  isn't the case for any of the test files in ex7 and some of the test files in ex8,
+  therefore my program supports both cases: If a function isn't specified, our code
+  will still work and assume we are in some function(named 'NO_FUNCTION'), this is
+  only used for labelling in the branching and function call/definition/return
+  commands, and shouldn't affect ex7 code at all.

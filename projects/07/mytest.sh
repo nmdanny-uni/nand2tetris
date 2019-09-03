@@ -14,11 +14,12 @@ cp -r $DIR/test_programs_dir/* $WORK_DIR/programs
 SUCC=0
 FAIL=0
 
+# Testing .VM files(ex7 and some of ex8)
 for i in $WORK_DIR/*.vm;
 do
 	name=`basename $i .vm`
   echo "Testing .vm file $i"
-	$DIR/VMtranslator $i $*
+	$DIR/VMtranslator7 $i $*
 	execOut=$(CPUEmulator.sh $WORK_DIR/$name.tst)
 
   if [[ $execOut == "" ]]  # on fail, no success msg is printed to stdout
@@ -30,10 +31,11 @@ do
 
 done;
 
+# Testing .VM programs(that have a directory, a Sys.vm and require bootstrap)
 for i in $WORK_DIR/programs/*;
 do
     echo "Testing vm program at directory $i"
-    $DIR/VMtranslator $i $* -b
+    $DIR/VMtranslator8 $i $* -b
     for tst in $i/*.tst;
     do
         if [[ $tst =~ "VME" ]]
