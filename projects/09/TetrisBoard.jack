@@ -54,6 +54,9 @@ class TetrisBoard {
     return this;
   }
 
+  /** Sets the square at the (x,y) coordinate in the grid to be black if active,
+      otherwise white.
+  */
   method void setActive(int x, int y, boolean active) {
     var TetrisSquare square;
     let square = grid[x + (y * numCols)];
@@ -62,13 +65,14 @@ class TetrisBoard {
   }
 
   /** Draws/updates all squares on screen.
+      Note, this is a heavy method, it should only be ran at the start of the game.
+      Use the more granular 'setActive' method to toggle specific squares that move.
   */
   method void draw() {
     var int i;
     var TetrisSquare curSquare;
     do Screen.clearScreen();
 
-    
     // drawing score (textual interface)
     do Output.printString("Score: ");
     do Output.printInt(score);

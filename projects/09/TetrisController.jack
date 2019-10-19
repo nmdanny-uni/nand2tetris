@@ -1,0 +1,128 @@
+/* This class is responsible for driving the game, by handling keyboard inputs
+   and drawing to screen according to the current state of the game.
+*/
+class TetrisController {
+  field TetrisBoard board;
+  field int score;
+
+  // Current mode
+  // 0: Start screen
+  // 1: Playing
+  // 2: Restarting
+  // 3: Quit
+  field int mode;
+  // number of seconds until restart(when in mode '2')
+  field int restartDelaySec;
+
+  /** Method for changing the current state of the game
+      see 'mode' documentation for the meaning of these numbers
+  */
+  method void changeMode(int newMode) {
+    var int prevMode;
+    let prevMode = mode;
+    let mode = newMode;
+    do Screen.clearScreen();
+    do Output.moveCursor(0, 0);
+
+    if (mode = 0) { // start screen
+      do Output.printString("Welcome to the tetris game by Daniel Kerbel");
+      do Output.println();
+      do Output.println();
+      do Output.printString("Controls:");
+      do Output.println();
+      do Output.printString("Press the left/right arrow-keys to move left/right");
+      do Output.println();
+      do Output.printString("Press the up-arrow key to rotate");
+      do Output.println();
+      do Output.printString("Press the down-arrow key to accelerate going down.");
+      do Output.println();
+      do Output.printString("Press 'Q' to quit or 'R' to restart");
+      do Output.println();
+      do Output.println();
+      do Output.printString("Press any key(other than Q) to begin the game...");
+      return;
+    }
+    if (mode = 1) { // playing
+      do board.draw();
+      return;
+    }
+    if (mode = 2) { // restarting
+      while (restartDelaySec > 0) {
+        do Output.moveCursor(0, 0);
+        do Screen.clearScreen();
+        do Output.printString("Your score was: ");
+        do Output.printInt(score);
+        do Output.println();
+
+        do Output.printString("Restarting the game in ");
+        do Output.printInt(restartDelaySec);
+        do Output.printString(" seconds");
+        do Sys.wait(1000);
+        let restartDelaySec = restartDelaySec - 1;
+      }
+      do changeMode(0);
+      return;
+    }
+    if (mode = 3) { // quitting
+      do Output.printString("Your score was: ");
+      do Output.printInt(score);
+      do Output.println();
+      do Output.printString("Now quitting the game...");
+      do Sys.halt();
+      return;
+    }
+    return;
+  }
+
+  constructor TetrisController new(){
+    let board = TetrisBoard.new();
+    let score = 0;
+    let mode = 0;
+    let restartDelaySec = 0;
+    return this;
+  }
+
+  method void dispose() {
+    do Memory.deAlloc(this);
+    return;
+  }
+
+  /** Processes player inputs */
+  method void processInput() {
+    if (Keyboard.keyPressed() = 81) { // if pressing 'Q'
+      do changeMode(3); // quit
+      return;
+    }
+    if ((mode = 0) & Keyboard.keyPressed()) { // pressing any key
+      do changeMode(1); // start game
+      return;
+    }
+
+    // processing inputs when playing
+    if (mode = 1) {
+      if (Keyboard.keyPressed() = 82) { // if pressing 'R' while playing
+        let restartDelaySec = getRestartDelaySec();
+        do changeMode(2); // restarting
+        return;
+      }
+    }
+    return;
+  }
+
+  /** Responsible for running the game
+  */
+  method void gameLoop() {
+    do changeMode(0);
+    while (true) {
+      do processInput();
+      do Sys.wait(100);
+    }
+    return;
+  }
+
+  /** Initial number of seconds until restart
+  */
+  method int getRestartDelaySec(){
+    return 3;
+  }
+}

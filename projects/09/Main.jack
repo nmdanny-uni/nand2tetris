@@ -13,9 +13,10 @@ class Main {
   }
 
   function void main() {
-    var TetrisBoard board;
-    let board = TetrisBoard.new();
-    do board.draw();
+    var TetrisController controller;
+    let controller = TetrisController.new();
+    do controller.gameLoop();
+    do controller.dispose();
     return;
   }
 }
