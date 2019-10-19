@@ -1,0 +1,73 @@
+/** A single square of a tetris board, which is the smallest unit in the game.
+    Once constructed, the square itself doesn't move, but rather, moving can be
+    emulated by toggling relevant squares on and off (this is the responsibility
+    of the TetrisPiece class)
+
+    In essence, a TetrisSquare is very similar to a pixel, but scaled and belongs to a tetris grid.
+*/
+class TetrisSquare {
+  // coordinates of top-left corner of square
+  field int x, y;
+
+  // true if black, false if white
+  field boolean active;
+
+  /**
+     Creates an inactive square originating at the given top-left coordinates
+  */
+  constructor TetrisSquare new(int setX, int setY) {
+    let active = false;
+    let x = setX;
+    let y = setY;
+    return this;
+  }
+
+  method void dispose() {
+    do Memory.deAlloc(this);
+    return;
+  }
+
+  /** Draws the square into screen.
+  */
+  method void draw(){
+    var int height, padding;
+    let height = TetrisSquare.getHeight();
+    let padding = TetrisSquare.getPadding();
+
+    // draw the padding
+    do Screen.setColor(~active);
+    do Screen.drawRectangle(x, y, x + height, y + height);
+
+    // draw the square
+    do Screen.setColor(active);
+    do Screen.drawRectangle(x + padding, y + padding, x + height - padding, y + height - padding);
+    return;
+  }
+
+  /** Turns the square on or off
+   */
+  method void setActive(boolean newActive) {
+    let active = newActive;
+    return;
+  }
+
+  /** Returns true if the square is active(black), false for white.
+   */
+  method boolean getActive(){
+    return active;
+  }
+
+  /**
+     Returns the height/width of a square.
+  */
+  function int getHeight() {
+    return 10;
+  }
+
+  /**
+     Returns the padding of a square (included within its height)
+  */
+  function int getPadding() {
+    return 1;
+  }
+}

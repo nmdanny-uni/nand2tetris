@@ -1,0 +1,21 @@
+class Main {
+  function void altmain() {
+    var TetrisSquare square;
+    let square = TetrisSquare.new(20, 5);
+    do square.setActive(true);
+    do square.draw();
+
+    let square = TetrisSquare.new(30, 5);
+    do square.setActive(true);
+    do square.draw();
+
+    return;
+  }
+
+  function void main() {
+    var TetrisBoard board;
+    let board = TetrisBoard.new();
+    do board.draw();
+    return;
+  }
+}
