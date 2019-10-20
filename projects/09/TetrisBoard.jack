@@ -35,9 +35,10 @@ class TetrisBoard {
     // Shift our board so that there'll be space for extra stuff & information
     let tlX = 200;
     let tlY = startingRow + (borderWidth * 2);
-    // Standard Tetris game dimensions (see wikipedia)
-    let numRows = 20;
-    let numCols = 10;
+
+    // Set game dimensions
+    let numRows = TetrisBoard.getNumRows();
+    let numCols = TetrisBoard.getNumColumns();
     let grid = Array.new(numRows * numCols);
 
     // initialize all squares
@@ -59,6 +60,10 @@ class TetrisBoard {
   */
   method void setActive(int x, int y, boolean active) {
     var TetrisSquare square;
+    if (x < 0 | y < 0 | x > (numCols - 1) | y > (numRows - 1)) {
+      do Output.printString("TetrisBoard.setActive() accessed coordinates out of bounds");
+      return;
+    }
     let square = grid[x + (y * numCols)];
     do square.setActive(active);
     return;
@@ -99,5 +104,15 @@ class TetrisBoard {
   method void dispose() {
     do Memory.deAlloc(this);
     return;
+  }
+
+  /** Returns the number of rows in our game */
+  function int getNumRows() {
+    return 20;
+  }
+
+  /** Returns the number of columns in our game */
+  function int getNumColumns() {
+    return 10;
   }
 }
