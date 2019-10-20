@@ -1,4 +1,4 @@
-
+import math
 def genRightShiftTest(num, amount):
     expected = num >> amount
     print(f'do assert(Util.rightShift({num}, {amount}) = {expected}, "{num} >> {amount} = {expected}");')
@@ -41,3 +41,16 @@ def genXorTests(a, b):
 
 for [a, b] in xorTestCases:
     genXorTests(a, b)
+
+def genModulusRealTest(a, b):
+    if b == 0:
+        return
+    if a < 0 or b < 0:
+        return
+    expected = a % b
+    print(f'do assert(Util.modulus({a}, {b}) = {expected}, "{a} % {b} = {expected}");')
+
+combined = modTestCases + xorTestCases
+
+for [a,b] in combined:
+    genModulusRealTest(a, b)

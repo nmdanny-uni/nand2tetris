@@ -1,0 +1,43 @@
+/** Implementation of pseudorandom number generator
+    Uses singleton for global access
+*/
+class Random {
+  // LCG parameters
+  field int seed;
+  field int a;
+  field int c;
+
+  static Random instance;
+
+  constructor Random new(int setSeed) {
+    let seed = setSeed;
+    let a = 14314;
+    let c = 0;
+    return this;
+  }
+
+  /** Internal method that obtains a random number. Use the static function instead */
+  method int _getNumber(){
+    let seed = Util.modulus_exp(((a * seed) + c), 16);
+    return seed;
+  }
+
+  /** Obtains a random number */
+  function int getNumber() {
+    if (instance = 0) {
+      let instance = Random.new(1337);
+    }
+    return instance._getNumber();
+  }
+
+  /** Sets the global seed to a new one */
+  function void setSeed(int newSeed) {
+    let instance = Random.new(newSeed);
+    return;
+  }
+
+  method void dispose() {
+    do Memory.deAlloc(this);
+    return;
+  }
+}
