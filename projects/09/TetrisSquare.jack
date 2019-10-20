@@ -44,10 +44,11 @@ class TetrisSquare {
     return;
   }
 
-  /** Turns the square on or off
+  /** Turns the square on or off, re-drawing it.
    */
   method void setActive(boolean newActive) {
     let active = newActive;
+    do draw();
     return;
   }
 

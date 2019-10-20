@@ -2,7 +2,13 @@
    and drawing to screen according to the current state of the game.
 */
 class TetrisController {
+  // used to draw squares on screen
   field TetrisBoard board;
+
+  // either 0(a null pointer) if the game hasn't started, otherwise a valid Piece object.
+  field TetrisPiece currentPiece;
+
+  // current score
   field int score;
 
   // Current mode
@@ -44,6 +50,7 @@ class TetrisController {
     }
     if (mode = 1) { // playing
       do board.draw();
+      do createNewPiece();
       return;
     }
     if (mode = 2) { // restarting
@@ -79,6 +86,7 @@ class TetrisController {
     let score = 0;
     let mode = 0;
     let restartDelaySec = 0;
+    let currentPiece = 0;
     return this;
   }
 
@@ -87,7 +95,7 @@ class TetrisController {
     return;
   }
 
-  /** Processes player inputs */
+  /** Processes player inputs. To be ran every tick */
   method void processInput() {
     if (Keyboard.keyPressed() = 81) { // if pressing 'Q'
       do changeMode(3); // quit
@@ -105,8 +113,50 @@ class TetrisController {
         do changeMode(2); // restarting
         return;
       }
+      if (Keyboard.keyPressed() = 130) { // left-arrow
+        do movePiece(-1, 0);
+      }
+      if (Keyboard.keyPressed() = 132) { // right-arrow
+        do movePiece(1, 0);
+      }
+      if (Keyboard.keyPressed() = 133) { // down-arrow
+        do movePiece(0, 1);
+      }
     }
     return;
+  }
+
+  /** Creates a new tetris piece and draws it on the board
+  */
+  method void createNewPiece() {
+    if (~(currentPiece = 0)) {
+      do currentPiece.dispose();
+    }
+    let currentPiece = TetrisPiece.new(612, 5, 0);
+    do currentPiece.draw(board, true);
+    return;
+  }
+
+  /** Tries moving the piece by the given units, returning whether the move was
+      successfull or blocked.
+  */
+  method boolean movePiece(int deltaX, int deltaY) {
+    if (currentPiece = 0) {
+      do Output.printString("Null pointer dereference at movePiece");
+      do Sys.halt();
+    }
+    // TODO check for collisions and ensure new position is within bounds
+
+    // Un-draw the piece at the old location
+    do currentPiece.draw(board, false);
+    // Change its coordinates
+
+    do currentPiece.setTopLeftCoordinates(currentPiece.getTopLeftX() + deltaX,
+                                          currentPiece.getTopLeftY() + deltaY);
+
+    // Draw the piece at the new location
+    do currentPiece.draw(board, true);
+    return true;
   }
 
   /** Responsible for running the game
@@ -115,7 +165,7 @@ class TetrisController {
     do changeMode(0);
     while (true) {
       do processInput();
-      do Sys.wait(100);
+      do Sys.wait(tickDelayMs());
     }
     return;
   }
@@ -124,5 +174,10 @@ class TetrisController {
   */
   method int getRestartDelaySec(){
     return 3;
+  }
+
+  /** Number of milliseconds between each game tick */
+  method int tickDelayMs() {
+    return 100;
   }
 }
