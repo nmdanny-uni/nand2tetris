@@ -12,11 +12,15 @@ class TetrisController {
   // current score
   field int score;
 
-  /* Starts the game, responsible for initializing relevant fields */
+  /* Starts a new game, responsible for initializing relevant fields
+  */
   method void startGame() {
     do Output.moveCursor(0, 0);
     do Screen.clearScreen();
 
+    if (~(board = 0)) {
+      do board.dispose();
+    }
     let board = TetrisBoard.new();
     let score = 0;
     do board.draw();
@@ -48,13 +52,16 @@ class TetrisController {
       return false;
     }
     if (Keyboard.keyPressed() = 130) { // left-arrow
-      do movePiece(-1, 0);
+      do currentPiece.move(board, -1, 0);
     }
     if (Keyboard.keyPressed() = 132) { // right-arrow
-      do movePiece(1, 0);
+      do currentPiece.move(board, 1, 0);
+    }
+    if (Keyboard.keyPressed() = 131) { // up-arrow
+      do currentPiece.rotate(board);
     }
     if (Keyboard.keyPressed() = 133) { // down-arrow
-      do movePiece(0, 1);
+      do currentPiece.move(board, 0, 1);
     }
     return true;
   }
@@ -65,31 +72,9 @@ class TetrisController {
     if (~(currentPiece = 0)) {
       do currentPiece.dispose();
     }
-    let currentPiece = TetrisPiece.new(612, 5, 0);
+    let currentPiece = TetrisPiece.new(2, 0, 3, 0);
     do currentPiece.draw(board, true);
     return;
-  }
-
-  /** Tries moving the piece by the given units, returning whether the move was
-      successfull or blocked.
-  */
-  method boolean movePiece(int deltaX, int deltaY) {
-    if (currentPiece = 0) {
-      do Output.printString("Null pointer dereference at movePiece");
-      do Sys.halt();
-    }
-    // TODO check for collisions and ensure new position is within bounds
-
-    // Un-draw the piece at the old location
-    do currentPiece.draw(board, false);
-
-    // Change its coordinates
-    do currentPiece.setTopLeftCoordinates(currentPiece.getTopLeftX() + deltaX,
-                                          currentPiece.getTopLeftY() + deltaY);
-
-    // Draw the piece at the new location
-    do currentPiece.draw(board, true);
-    return true;
   }
 
   /** The main entry point, responsible for running the game

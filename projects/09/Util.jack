@@ -1,10 +1,21 @@
 /** Contains various helper functions */
 class Util {
 
+  // used for more efficient computations of shifts
+  // powersOf2[x] == 2^x
+  static Array powersOf2;
+
+  /** Returns the left shift, number << amount */
   function int leftShift(int number, int amount){
     return number * Util.pow(2, amount);
   }
 
+  /** Returns the logical right shift, number >> amount */
+  function int rightShift(int number, int amount) {
+    return number / Util.pow(2, amount);
+  }
+
+  /** Returns base^exponent */
   function int pow(int base, int exponent) {
     var int result;
     let result = 1;
@@ -15,9 +26,23 @@ class Util {
     return result;
   }
 
-  /** Returns true if the ix'th bit(beginning with LSB) of num is set */
+  /** Returns true if the ix'th bit(starting from LSB) of num is set */
   function boolean getBit(int num, int ix) {
     return ~((num & Util.leftShift(1, ix)) = 0);
   }
 
+     /** Perfoms a % 2^exp, that is, the remainder of the division of 'a' by given exponent
+     */
+     function int modulus_exp(int a, int exponent) {
+       return a & (Util.pow(2, exponent) - 1);
+     }
+   
+     function int modulus(int dividend, int divisor) {
+       return 0;
+     }
+   
+     /** Returns a XOR b */
+     function int xor(int a, int b) {
+       return (a | b) & (~(a & b));
+     }
 }
