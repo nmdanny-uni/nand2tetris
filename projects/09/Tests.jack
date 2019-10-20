@@ -1,0 +1,52 @@
+class Tests {
+  field boolean success;
+
+  constructor Tests new() {
+    let success = true;
+    return this;
+  }
+
+  method boolean getSuccess() {
+    return success;
+  }
+
+  method void assert(boolean bool, String errMsg) {
+    if (~bool) {
+      do Output.printString("Test failed: ");
+      do Output.printString(errMsg);
+      do Output.println();
+      let success = false;
+    }
+    return;
+  }
+
+
+  function boolean runAllTests() {
+    var Tests tests;
+    let tests = Tests.new();
+    do tests.runTests();
+    return tests.getSuccess();
+  }
+
+  method void runTests() {
+    do testBitManipulations();
+    return;
+  }
+
+  method void testBitManipulations() {
+    do assert(Util.pow(5,3) = 125, "pow(5,3) == 125");
+    do assert(Util.leftShift(1, 1) = 2, "1 << 1 = 2");
+    do assert(Util.leftShift(1, 2) = 4, "1 << 2 = 4");
+    do assert(Util.leftShift(1, 3) = 8, "1 << 3 = 8");
+    do assert(Util.getBit(1337, 0), "1 bit of 1337 is 1");
+    do assert(~Util.getBit(1337, 1), "2 bit of 1337 is 0");
+    do assert(~Util.getBit(1337, 2), "3 bit of 1337 is 0");
+    do assert(Util.getBit(1337, 3), "4 bit of 1337 is 1");
+    do assert(~Util.getBit(1337, 15), "16 bit of 1337 is 0");
+    do assert(Util.getBit(-15047, 15), "16 bit of -15047 is 1");
+    do assert(Util.getBit(-15047, 14), "15 bit of -15047 is 1");
+    do assert(~Util.getBit(17721, 15), "16 bit of 17721 is 0");
+    do assert(Util.getBit(17721, 14), "15 bit of 17721 is 1");
+    return;
+  }
+}
