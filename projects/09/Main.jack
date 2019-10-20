@@ -17,7 +17,7 @@ class Main {
     if (~Tests.runAllTests()) {
       do Sys.halt();
     }
-    
+    do TetrisPiece.initShapes();
 
     let controller = TetrisController.new();
     do controller.gameLoop();
