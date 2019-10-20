@@ -1,0 +1,74 @@
+/** This class is responsible for displaying the start, restart and stop screen
+    to the user. */
+class GameScreens {
+  // note that the start/restart screens don't call the startGame method(of TetrisController)
+  // explicitly, rather, it will be called as part of the gameLoop. This was done to avoid
+  // stack-overflow issues from repeatedly restarting a game.
+
+  /** Shows the start screen */
+  function void showStartScreen() {
+    do Output.moveCursor(0, 0);
+    do Screen.clearScreen();
+
+    do Output.printString("Welcome to the tetris game by Daniel Kerbel");
+    do Output.println();
+    do Output.println();
+    do Output.printString("Controls:");
+    do Output.println();
+    do Output.printString("Press the left/right arrow-keys to move left/right");
+    do Output.println();
+    do Output.printString("Press the up-arrow key to rotate");
+    do Output.println();
+    do Output.printString("Press the down-arrow key to accelerate going down.");
+    do Output.println();
+    do Output.printString("Press 'Q' to quit or 'R' to restart");
+    do Output.println();
+    do Output.println();
+    do Output.printString("Press any key to continue");
+    do Keyboard.readChar();
+    return;
+  }
+
+  /** Shows the restart screen */
+  function void showRestartScreen(int oldScore) {
+    var int restartDelaySec;
+    let restartDelaySec = GameScreens.getRestartDelaySec();
+
+    while (restartDelaySec > 0) {
+      do Output.moveCursor(0, 0);
+      do Screen.clearScreen();
+      do Output.printString("Your score was: ");
+      do Output.printInt(oldScore);
+      do Output.println();
+
+      do Output.printString("Restarting the game in ");
+      do Output.printInt(restartDelaySec);
+      do Output.printString(" seconds");
+      do Sys.wait(1000);
+      let restartDelaySec = restartDelaySec - 1;
+    }
+
+    // to avoid stackoverflow, this function doesn't call 'startGame' explicitly, rather, it will be called next
+    // in the loop at 'gameLoop'
+    return;
+  }
+
+  /** Shows the quit screen to the player */
+  function void showQuittingScreen(int oldScore) {
+    do Output.moveCursor(0, 0);
+    do Screen.clearScreen();
+
+    do Output.printString("Your score was: ");
+    do Output.printInt(oldScore);
+    do Output.println();
+    do Output.printString("The game was quit, hope you had fun!");
+    do Sys.halt();
+    return;
+  }
+
+  /** Initial number of seconds until restart
+   */
+  function int getRestartDelaySec(){
+    return 3;
+  }
+}
