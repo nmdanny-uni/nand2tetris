@@ -33,6 +33,8 @@ class TetrisController {
   }
 
   method void dispose() {
+    do board.dispose();
+    do currentPiece.dispose();
     do Memory.deAlloc(this);
     return;
   }

@@ -27,7 +27,6 @@ class TetrisBoard {
   constructor TetrisBoard new() {
     var int x, y;
     var int i;
-    var TetrisSquare curSquare;
     let startingRow = 12;
     let borderWidth = 5;
     let score = 0;
@@ -102,6 +101,17 @@ class TetrisBoard {
   }
 
   method void dispose() {
+    var int i;
+    var TetrisSquare curSquare;
+    let i = 0;
+
+    // clear the array's contents
+    while (i < (numRows * numCols)) {
+      let curSquare = grid[i];
+      do curSquare.dispose();
+      let i = i + 1;
+    }
+    do grid.dispose();
     do Memory.deAlloc(this);
     return;
   }
