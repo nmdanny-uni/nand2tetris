@@ -12,6 +12,12 @@ class TetrisController {
   // current score
   field int score;
 
+  // The number of 'ticks' that have passed since startnig the game, where
+  // the length of a tick is defined in the 'getTickDelayMs' method
+  //
+  // We can use this along with modulu to schedule certain events to happen every couple of ticks.
+  field int ticksPassed;
+
   /* Starts a new game, responsible for initializing relevant fields
   */
   method void startGame() {
@@ -23,6 +29,16 @@ class TetrisController {
     }
     let board = TetrisBoard.new();
     let score = 0;
+    let ticksPassed = 0;
+
+    do board.setMode(0,19, 2);
+    do board.setMode(1,19, 2);
+    do board.setMode(2,19, 2);
+    do board.setMode(3,19, 2);
+    do board.setMode(6, 19, 2);
+    do board.setMode(7, 19, 2);
+    do board.setMode(8, 19, 2);
+    do board.setMode(9, 19, 2);
     do board.draw();
     do createNewPiece();
     return;
@@ -44,7 +60,6 @@ class TetrisController {
       returns false when restarting/quitting/losing, otherwise true.
   */
   method boolean processInput() {
-    var boolean wentDown, lost;
     if (Keyboard.keyPressed() = 81) { // Q button
       do GameScreens.showQuittingScreen(score);
       return false;
@@ -64,14 +79,7 @@ class TetrisController {
       do currentPiece.rotate(board);
     }
     if (Keyboard.keyPressed() = 133) { // down-arrow
-      let wentDown = currentPiece.move(board, 0, 1);
-      if (~wentDown) {
-        let lost = ~placePiece();
-        if (lost) {
-          do GameScreens.showLoseScreen(score);
-          return false;
-        }
-      }
+      return moveDown();
     }
     return true;
   }
@@ -134,13 +142,34 @@ class TetrisController {
     return;
   }
 
+  /** Tries moving the place down, placing it & respawning if blocked.
+      Returns true if we can keep playing or false if we lost (if the
+      new piece that spawned, is also blocked)
+  */
+  method boolean moveDown() {
+    var boolean wentDown, lost;
+    let wentDown = currentPiece.move(board, 0, 1);
+    if (~wentDown) {
+      let lost = ~placePiece();
+      if (lost) {
+        do GameScreens.showLoseScreen(score);
+        return false;
+      }
+    }
+    return true;
+  }
+
   /** The main entry point, responsible for running the game
   */
   method void gameLoop() {
     var boolean continuePlaying;
+    var int tickDelay;
+    let tickDelay = getTickDelayMs();
 
     // only ran once in the program's lifetime
     do GameScreens.showStartScreen();
+
+    // the following loop executes every time we start a new game
     while (true) {
       do startGame();
       let continuePlaying = true;
@@ -148,15 +177,22 @@ class TetrisController {
       // the following loop occurs within a single game
       while (continuePlaying) {
         let continuePlaying = processInput();
-        do Sys.wait(getTickDelayMs());
-      }
+        do Sys.wait(tickDelay);
+        let ticksPassed = ticksPassed + 1;
 
+        // every 16 ticks (when ticksPassed % 16 == 0), try moving the piece down
+        if (continuePlaying & (Util.modulus_exp(ticksPassed, 4) = 0)) {
+          let continuePlaying = moveDown();
+        }
+      }
     }
     return;
   }
 
 
-  /** Number of milliseconds between each game tick */
+  /** Number of milliseconds between each game tick.
+      Changing this value will affect the falling-down speed
+  */
   method int getTickDelayMs() {
     return 100;
   }
