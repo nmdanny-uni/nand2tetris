@@ -1,7 +1,7 @@
 /** This class is responsible for displaying the start, restart and stop screen
     to the user. */
 class GameScreens {
-  // note that the start/restart screens don't call the startGame method(of TetrisController)
+  // note that the start/restart/lose screens don't call the startGame method(of TetrisController)
   // explicitly, rather, it will be called as part of the gameLoop. This was done to avoid
   // stack-overflow issues from repeatedly restarting a game.
 

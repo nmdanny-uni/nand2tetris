@@ -30,32 +30,14 @@ class Util {
     return;
   }
 
-  // TODO: get rid of this method once I'm sure the above array isn't causing
-  // any memory errors
-  function int getPowerOf2(int exponent) {
-    // return Util.pow(2, exponent);
-    return powersOf2[exponent];
-  }
-
   /** Returns the left shift, number << amount */
   function int leftShift(int number, int amount){
-    return number * Util.getPowerOf2(amount);
+    return number * powersOf2[amount];
   }
 
   /** Returns the logical right shift, number >> amount */
   function int rightShift(int number, int amount) {
-    return number / Util.getPowerOf2(amount);
-  }
-
-  /** Returns base^exponent */
-  function int pow(int base, int exponent) {
-    var int result;
-    let result = 1;
-    while (exponent > 0) {
-      let result = result * base;
-      let exponent = exponent - 1;
-    }
-    return result;
+    return number / powersOf2[amount];
   }
 
   /** Returns true if the ix'th bit(starting from LSB) of num is set */
@@ -68,15 +50,15 @@ class Util {
     return num | Util.leftShift(1, ix);
   }
 
-  /** Perfoms a % 2^exp, that is, the remainder of the division of 'a' by given exponent
+  /** Perfoms a % (2^exp), that is, the remainder of the division of 'a' by given exponent.
+      This should be faster than below, as it doesn't perform costly division and multiplication.
    */
   function int modulus_exp(int a, int exponent) {
-    return a & (Util.getPowerOf2(exponent) - 1);
+    return a & (powersOf2[exponent] - 1);
   }
 
   /** Returns a % b, the remainder of a/b
       Note, this is C-like modulus, using division that rounds towards 0.
-      (Technically this isn't really modulus)
    */
   function int modulus(int a, int b) {
     // (a/b) * b + a%b = a

@@ -1,20 +1,9 @@
 class Main {
-  function void altmain() {
-    var TetrisSquare square;
-    let square = TetrisSquare.new(20, 5);
-    do square.setMode(1);
-    do square.draw();
-
-    let square = TetrisSquare.new(30, 5);
-    do square.setMode(1);
-    do square.draw();
-
-    return;
-  }
 
   function void main() {
     var TetrisController controller;
     do Util.initPowersOf2();
+
     if (~Tests.runAllTests()) {
       do Sys.halt();
     }
