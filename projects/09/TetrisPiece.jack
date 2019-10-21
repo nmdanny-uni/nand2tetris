@@ -128,7 +128,6 @@ class TetrisPiece {
 
     if (~TetrisPiece.ensureNoCollision(board, shapeNum, shapeRotation,
                                        newTlX, newTlY)) {
-      do Output.printString("move - collided!");
       return false;
     }
 
@@ -156,7 +155,6 @@ class TetrisPiece {
     }
 
     if (~TetrisPiece.ensureNoCollision(board, shapeNum, newRotation, tlX, tlY)) {
-      do Output.printString("rotate - collided!");
       return false;
     }
 
@@ -180,6 +178,7 @@ class TetrisPiece {
     let newShapeEncoding = shapes[(curShapeNum * 4) + newRotation];
     let occupancyMask = board.get4x4GridOccupancyMask(newTlX, newTlY);
     // TODO: there's an OS bug regarding string disposal, printing all these strings is bad
+    /*
     do Output.moveCursor(0, 0);
     do Output.printString("shape");
     do Output.println();
@@ -190,6 +189,7 @@ class TetrisPiece {
     do Output.printString("and");
     do Output.println();
     do Debug.displayShape(occupancyMask & newShapeEncoding);
+    */
     return ((occupancyMask & newShapeEncoding) = 0);
   }
 
