@@ -32,7 +32,7 @@ class TetrisBoard {
     let score = 0;
 
     // Shift our board so that there'll be space for extra stuff & information
-    let tlX = 200;
+    let tlX = 400;
     let tlY = startingRow + (borderWidth * 2);
 
     // Set game dimensions
@@ -59,30 +59,75 @@ class TetrisBoard {
   */
   method void setMode(int x, int y, int mode) {
     var TetrisSquare square;
-    if ((x < 0) | (y < 0) | (x > (numCols - 1)) | (y > (numRows - 1))) {
+    if (areCoordinatesNotInBounds(x, y)) {
+      do Output.println();
       do Output.printString("TetrisBoard.setMode() accessed coordinates out of bounds");
-      do Sys.halt();
+      do Output.println();
+      do Output.printString("x: ");
+      do Output.printInt(x);
+      do Output.printString(" y: ");
+      do Output.printInt(y);
+      do Output.println();
+      do Sys.error(1337);
     }
     if ((mode < 0) | (mode > 2)) {
+      do Output.println();
       do Output.printString("TetrisBoard.setMode() got invalid mode");
-      do Sys.halt();
+      do Sys.error(1337);
     }
     let square = grid[x + (y * numCols)];
     do square.setMode(mode);
     return;
   }
 
-
-  /** Returns true if the given coordinate is occupied by a placed block(mode = 2)
-      OR if it's out of bounds
+  /** Returns a 16-bit encoding of a 4x4 grid, whose topleft corner begins at the given coordinates
+      Any block that is occupied by a placed block(mode = 2) OR is out of bounds, will be represented by
+      a 1 bit. Otherwise by a 0 bit.
+      The encoding is similar to 'shapeEncoding' of 'TetrisPiece' - the topleft corner is the LSB,
+      and we go left to right, up to down, meaning the bottomright corner is MSB.
   */
-  method boolean isOccupied(int x, int y) {
+  method int get4x4GridOccupancyMask(int tlX, int tlY) {
+    var int mask;
+    var int x, y, curBit;
     var TetrisSquare square;
-    if ((x < 0) | (y < 0) | (x > (numCols - 1)) | (y > (numRows - 1))) {
-      return true;
+    let mask = 0;
+
+    let curBit = 0;
+    let y = tlY;
+    do Output.moveCursor(5, 24);
+    do Output.printString("Testing 4x4 grid at x=");
+    do Output.printInt(tlX);
+    do Output.printString(" y=");
+    do Output.printInt(tlY);
+    do Output.println();
+    while (y < (tlY + 4)) {
+      let x = tlX;
+      while (x < (tlX + 4)) {
+        if (areCoordinatesNotInBounds(x, y)) {
+          do Output.printString("Coord OOB at x=");
+          do Output.printInt(x);
+          do Output.printString(" y=");
+          do Output.printInt(y);
+          do Output.println();
+          let mask = Util.setBit(mask, curBit);
+        }
+        else {
+          let square = grid[x + (y * numCols)];
+          if (square.getMode() = 2) {
+            do Output.printString("Coord OCC at x=");
+            do Output.printInt(x);
+            do Output.printString(" y=");
+            do Output.printInt(y);
+            do Output.println();
+            let mask = Util.setBit(mask, curBit);
+          }
+        }
+        let curBit = curBit + 1;
+        let x = x + 1;
+      }
+      let y = y + 1;
     }
-    let square = grid[x + (y * numCols)];
-    return square.getMode() = 2;
+    return mask;
   }
 
   /** Draws/updates all squares on screen.
@@ -130,6 +175,12 @@ class TetrisBoard {
     do grid.dispose();
     do Memory.deAlloc(this);
     return;
+  }
+
+
+  /** Returns true IFF the given coordinates are outside the board's bounds. */
+  method boolean areCoordinatesNotInBounds(int x, int y) {
+    return ((x < 0) | (y < 0) | (x > (numCols - 1)) | (y > (numRows - 1)));
   }
 
   /** Returns the number of rows in our game */

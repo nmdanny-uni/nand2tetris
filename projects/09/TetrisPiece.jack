@@ -123,14 +123,23 @@ class TetrisPiece {
       successfull or blocked.
   */
   method boolean move(TetrisBoard board, int deltaX, int deltaY) {
-    // TODO check for collisions and ensure new position is within bounds
+    var int newTlX, newTlY;
+
+    let newTlX = tlX + deltaX;
+    let newTlY = tlY + deltaY;
+
+    if (~TetrisPiece.ensureNoCollision(board, shapeNum, shapeRotation,
+                                       newTlX, newTlY)) {
+      do Output.printString("move - collided!");
+      return false;
+    }
 
     // Un-draw the piece at the old location
     do draw(board, false);
 
     // Change its coordinates
-    let tlX = tlX + deltaX;
-    let tlY = tlY + deltaY;
+    let tlX = newTlX;
+    let tlY = newTlY;
 
     // Draw the piece at the new location
     do draw(board, true);
@@ -139,25 +148,52 @@ class TetrisPiece {
 
   /** Rotates the piece, returning whether the rotation succeeded */
   method boolean rotate(TetrisBoard board) {
-    // TODO check for collision
+    var int newRotation;
+
+    // calculate the new rotation
+    let newRotation = shapeRotation + 1;
+    // in case it went out of bounds
+    if (newRotation > 3) {
+      let newRotation = 0;
+    }
+
+    if (~TetrisPiece.ensureNoCollision(board, shapeNum, newRotation, tlX, tlY)) {
+      do Output.printString("rotate - collided!");
+      return false;
+    }
+
     // undraw old shape
     do draw(board, false);
 
-    // advance shapeRotation index
-    let shapeRotation = shapeRotation + 1;
-
-    // in case it went out of bounds
-    if (shapeRotation > 3) {
-      let shapeRotation = 0;
-    }
-
-    // TODO check for collisions, if so, go back to the previous rotation
-
-
     // draw rotated piece
+    let shapeRotation = newRotation;
     let shapeEncoding = shapes[(shapeNum * 4) + shapeRotation];
     do draw(board, true);
     return true;
+  }
+
+  /** Returns true if the given shape(as specified by the given shape number and rotation)
+      doesn't collide with placed blocks in the board (or goes out of bounds)
+  */
+  function boolean ensureNoCollision(TetrisBoard board,
+                                     int curShapeNum, int newRotation,
+                                     int newTlX, int newTlY) {
+    var int newShapeEncoding, occupancyMask;
+    let newShapeEncoding = shapes[(curShapeNum * 4) + newRotation];
+    let occupancyMask = board.get4x4GridOccupancyMask(newTlX, newTlY);
+    do Output.moveCursor(0, 0);
+    do Output.printString("ensureNoCollision:");
+    do Output.println();
+    do Output.printString("tested encoding: ");
+    do Output.println();
+    do Debug.displayShape(newShapeEncoding);
+    do Output.printString("occupancy mask: ");
+    do Output.println();
+    do Debug.displayShape(occupancyMask);
+    do Output.printString("ANDing: ");
+    do Output.println();
+    do Debug.displayShape(occupancyMask & newShapeEncoding);
+    return ((occupancyMask & newShapeEncoding) = 0);
   }
 
   method void dispose(){

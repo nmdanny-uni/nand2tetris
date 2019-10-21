@@ -63,6 +63,11 @@ class Util {
     return ~((num & Util.leftShift(1, ix)) = 0);
   }
 
+  /** Sets the ix'th bit(starting from LSB) of num to 1 */
+  function int setBit(int num, int ix) {
+    return num | Util.leftShift(1, ix);
+  }
+
   /** Perfoms a % 2^exp, that is, the remainder of the division of 'a' by given exponent
    */
   function int modulus_exp(int a, int exponent) {

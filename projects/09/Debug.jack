@@ -1,0 +1,33 @@
+class Debug {
+  function void displayShape(int shapeEncoding) {
+    var int x, y, curBit;
+    var String repr;
+    let repr = String.new(16 + 4); // 16 chars + 4 newlines
+
+    let curBit = 0;
+    let y = 0;
+    while (y < 4) {
+      let x = 0;
+      while (x < 4) {
+        if (Util.getBit(shapeEncoding, curBit)) {
+          do repr.appendChar(49);
+        } else {
+          do repr.appendChar(48);
+        }
+        let x = x + 1;
+        let curBit = curBit + 1;
+      }
+      do repr.appendChar(String.newLine());
+      let y = y + 1;
+    }
+
+    do Output.printString("---- value: ");
+    do Output.printInt(shapeEncoding);
+    do Output.println();
+    do Output.printString(repr);
+    do Output.printString("----");
+    do Output.println();
+    do repr.dispose();
+    return;
+  }
+}
