@@ -91,16 +91,37 @@ class TetrisController {
     // occupiedSquares is a 4x2 matrix, first col for 'x' coords and second for 'y'
     var Array occupiedSquares;
     var int xCord, yCord;
+    var int yMin; // this includes the topmost(minimal) y-coordinate of the shape
     var int coordIx;
     let coordIx = 0;
+    let yMin = 9999;
     let occupiedSquares = currentPiece.getOccupiedCoordinates();
     while (coordIx < 4) {
       let xCord = occupiedSquares[coordIx * 2];
       let yCord = occupiedSquares[(coordIx * 2) + 1];
+      let yMin = Math.min(yMin, yCord);
       do board.setMode(xCord, yCord, 2); // mode 2 = placed block
       let coordIx = coordIx + 1;
     }
+    do clearLines(yMin);
     do createNewPiece();
+    return;
+  }
+
+  /** Clears up to 4 lines of blocks, beginning from the given row,
+      and going down up.
+  */
+  method void clearLines(int startRow) {
+    var int numLinesCleared;
+    var int y;
+    let numLinesCleared = 0;
+    let y = startRow;
+    while ((y < TetrisBoard.getNumRows()) & (y < (startRow + 4))) {
+      if (board.isLineFull(y)) {
+        do board.clearLine(y);
+      }
+      let y = y + 1;
+    }
     return;
   }
 

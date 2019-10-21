@@ -201,6 +201,34 @@ class TetrisBoard {
     return ((x < 0) | (y < 0) | (x > (numCols - 1)) | (y > (numRows - 1)));
   }
 
+  /** Returns true if the given row is occupied by placed blocks */
+  method boolean isLineFull(int y) {
+    var int x;
+    var TetrisSquare curSquare;
+    let x = 0;
+    while (x < numCols) {
+      let curSquare = grid[x + (y * numCols)];
+      if (~(curSquare.getMode() = 2)) {
+        return false;
+      }
+      let x = x + 1;
+    }
+    return true;
+  }
+
+  /** Clears the given row. */
+  method void clearLine(int y) {
+    var int x;
+    var TetrisSquare curSquare;
+    let x = 0;
+    while (x < numCols) {
+      let curSquare = grid[x + (y * numCols)];
+      do curSquare.setMode(0);
+      let x = x + 1;
+    }
+    return;
+  }
+
   /** Returns the number of rows in our game */
   function int getNumRows() {
     return 20;
