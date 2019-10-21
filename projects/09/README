@@ -1,0 +1,110 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Projects 9 - Implementation of Tetris game
+                           ----------------------- 
+  
+
+Submitted Files
+
+.
+|-- Debug.vm            - contains debugging stuff, ignore this
+|-- GameScreens.vm      - responsible for displaying various screens to user
+|-- Main.vm             - entry point to program
+|-- Random.vm           - implementation of xorshift PRNG
+|-- Tests.vm            - some unit-tests for Util, ignore this
+|-- TetrisBoard.vm      - manages access to board, can be thought as a screen wrapper
+|-- TetrisController.vm - responsible for the main game loop, mostly interfaces between board & piece
+|-- TetrisPiece.vm      - represents the currently player-controlled tetromino piece
+|-- TetrisSquare.vm     - represents a single square within the board
+`-- Util.vm             - contains some helper functions for bitwise operations
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+In some cases, loading the game into the emulator after having already loaded/played
+this game or a different one, will not let you play this game - the screen will stay blank.
+
+In that case, please restart the VMEmulator and try loading the game from a blank slate.
+
+(Once ingame, you can press 'r' to restart - there's no need to re-load the program to memory)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+Design & Overview
+------
+
+An overview of some of the most important classes:
+
+-- TetrisSquare class --
+This is the basic unit of the program, which is an element of the grid within the 'TetrisBoard' class
+It stores the square's mode (if it's occupied by a piece, was placed earlier, or is unoccupied) and its
+coordinates. Squares remain in the same place at the array and their coordinates never change.
+
+-- TetrisBoard class --
+This class manages the state of the tetris grid and is responsible for drawing it to the screen.
+It allows setting/getting the mode of various squares via their 2D coordinates (row & column).
+In essence, it can be thought as a Screen wrapper, abstracting details such as pixel offsets, square
+size. It also encapsulates the 'TetrisSquare' class, which isn't used directly outside this class.
+
+-- TetrisPiece class --
+This represents the current, player controlled tetris piece (a tetromino)
+It contains methods for rotating & moving the piece, by delegating to a TetrisBoard instance,
+as well as checking for collisions by inspecting the board.
+
+Basically, these 3 classes form a simple hierarchy:
+The TetrisSquare represents a single block/square
+The TetrisBoard manages arbitrary access to any block within the grid
+The TetrisPiece manages specific blocks that form the piece.
+
+-- TetrisController class --
+This is the main class of the program, responsible for driving the game loop:
+this means, initializing the game, handling keyboard events, making the tetris piece fall,
+as well as managing the score and changing the game's state (restart/quit/loss)
+It mostly does so by bridging between the TetrisBoard and the TetrisPiece.
+
+
+Remarks & Implementation notes
+-------
+See comments in the beginning of each class, which include useful information.
+Some of the most interesting implementation details:
+
+- Representing shapes via 16 bit integers:
+  Since each shape consists of 4 blocks, it can be bounded by a subgrid of 4x4 blocks
+  While I first thought about using 16-element arrays, I found that it's possible to encode
+  the entire shape within an int, using lit bits to indicate an occupied block.
+  Since this representation is so compact, it was simple enough to pre-calculate all possible
+  rotations of each shape and encode them as an int. Therefore, a 7*4 matrix of ints is sufficient
+  to store all possible pieces in all of their rotations.
+
+  But more importantly, this encoding scheme makes it pretty easy to check for collisions: We can
+  scan the 4x4 grid we want to go to, for placed blocks(via TetrisBoard) and convert them to an int with
+  this scheme.
+  ANDing both ints gives us 0 iff all bits/squares don't intersect, which lets us know this is a valid
+  move/rotation.
+
+- Drawing:
+  The 'TetrisBoard' class is directly responsible for drawing, it draws the initial thick border and all inactive
+  squares at the game start. Whenever a piece is moved/rotated, it only re-draws the affected piece - this was done
+  to reduce flickering.
+  
+- 2D arrays/matrices:
+  Matrices are encoded via a single array, using row-major to provide us with 2D indexing.
+  This is much simpler than using an array of arrays, because of both syntactic reasons (Jack language
+  doesn't allow chaining index operators) as well as easier memory handling.
+  Matrices are most notably in TetrisBoard - the block grid, as well as the shapes matrix(explained above).
+  Another use is returning a list of occupied coordinates, using a column for the X axis and a different one
+  for the Y axis. (A more OOPy way would've been to define a 'Coordinate' type, but it seemed overkill)
+
+- Pseudo-random number generation:
+  I've chosen to use 'xorshift' algorithm for PRNG, which seems to produce acceptable results. This required implementing
+  several bitwise operations in the 'Util' module (some were also essential for dealing with the shape encoding described above).
+  Constraining the randomly generated number to a known range is done via a modulu function(also self-implemented).
+  This solution isn't optimal, it suffers from 'modulu bias' - real PRNG implementations have a dedicated function for computing
+  a random number within range, however I believe implementing such function is out of scope for this exercise.
+
+  Another issue is the seed, which is constant(set at the main function). It is possible to prompt the user
+  for a seed, or use his initial movements as a seed, but again, for the scope of the exercise it seems good
+  enough.
