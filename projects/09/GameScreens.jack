@@ -66,6 +66,28 @@ class GameScreens {
     return;
   }
 
+  /** Shows the loser screen */
+  function void showLoseScreen(int oldScore) {
+    var int pressedKey;
+
+    do Output.moveCursor(0, 0);
+    do Screen.clearScreen();
+
+    do Output.printString("You lost! Your score was: ");
+    do Output.printInt(oldScore);
+    do Output.println();
+    do Sys.wait(1000); // so player won't accidentally skip this the moment he lost
+    do Output.printString("Press any key to restart, or Q to quit");
+    do Output.println();
+
+    let pressedKey = Keyboard.readChar();
+    if (pressedKey = 81) { // Q button
+      do Output.printString("You've quit the game. Hope you had fun!");
+      do Sys.halt();
+    }
+    return;
+  }
+
   /** Initial number of seconds until restart
    */
   function int getRestartDelaySec(){

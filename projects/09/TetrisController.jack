@@ -41,10 +41,10 @@ class TetrisController {
 
   /** Processes player inputs. To be ran every tick during
       the game, this returns whether the game should continue running,
-      returns false when restarting/quitting, otherwise true.
+      returns false when restarting/quitting/losing, otherwise true.
   */
   method boolean processInput() {
-    var boolean wentDown;
+    var boolean wentDown, lost;
     if (Keyboard.keyPressed() = 81) { // Q button
       do GameScreens.showQuittingScreen(score);
       return false;
@@ -66,15 +66,20 @@ class TetrisController {
     if (Keyboard.keyPressed() = 133) { // down-arrow
       let wentDown = currentPiece.move(board, 0, 1);
       if (~wentDown) {
-        do placePiece();
+        let lost = ~placePiece();
+        if (lost) {
+          do GameScreens.showLoseScreen(score);
+          return false;
+        }
       }
     }
     return true;
   }
 
-  /** Creates a new tetris piece and draws it on the board
+  /** Tries creating a new tetris piece and draws it on the board
+      Returns false if there's no space for the new piece (loss condition)
   */
-  method void createNewPiece() {
+  method boolean createNewPiece() {
     if (~(currentPiece = 0)) {
       do currentPiece.dispose();
     }
@@ -82,12 +87,17 @@ class TetrisController {
                                        Util.getNumberInRange(0, 7),
                                        Util.getNumberInRange(0, 4),
                                        3, 0);
+    if (~currentPiece.isNotColliding(board)) {
+      return false;
+    }
     do currentPiece.draw(board, true);
-    return;
+    return true;
   }
 
-  /** Places the current piece on the map, and creates a new piece. */
-  method void placePiece() {
+  /** Places the current piece on the map, and creates a new piece,
+      returning whether it succeeded in placing it. (false indicates a loss condition)
+  */
+  method boolean placePiece() {
     // occupiedSquares is a 4x2 matrix, first col for 'x' coords and second for 'y'
     var Array occupiedSquares;
     var int xCord, yCord;
@@ -104,8 +114,7 @@ class TetrisController {
       let coordIx = coordIx + 1;
     }
     do clearLines(yMin);
-    do createNewPiece();
-    return;
+    return createNewPiece();
   }
 
   /** Clears up to 4 lines of blocks, beginning from the given row,

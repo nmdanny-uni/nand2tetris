@@ -168,6 +168,13 @@ class TetrisPiece {
     return true;
   }
 
+  /** Returns true if this shape isn't colliding with placed blocks in the board.
+      If this is false, the player lost. (This is called when a new piece spawns)
+  */
+  method boolean isNotColliding(TetrisBoard board) {
+    return TetrisPiece.ensureNoCollision(board, shapeNum, shapeRotation, tlX, tlY);
+  }
+
   /** Returns true if the given shape(as specified by the given shape number and rotation)
       doesn't collide with placed blocks in the board (or goes out of bounds)
   */
