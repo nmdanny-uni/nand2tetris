@@ -60,25 +60,27 @@ class TetrisController {
       returns false when restarting/quitting/losing, otherwise true.
   */
   method boolean processInput() {
-    if (Keyboard.keyPressed() = 81) { // Q button
+    var char keyPressed;
+    let keyPressed = Keyboard.keyPressed();
+
+    if (keyPressed = 81) { // Q button
       do GameScreens.showQuittingScreen(score);
       return false;
     }
-
-    if (Keyboard.keyPressed() = 82) { // R button
+    if (keyPressed = 82) { // R button
       do GameScreens.showRestartScreen(score);
       return false;
     }
-    if (Keyboard.keyPressed() = 130) { // left-arrow
+    if (keyPressed = 130) { // left-arrow
       do currentPiece.move(board, -1, 0);
     }
-    if (Keyboard.keyPressed() = 132) { // right-arrow
+    if (keyPressed = 132) { // right-arrow
       do currentPiece.move(board, 1, 0);
     }
-    if (Keyboard.keyPressed() = 131) { // up-arrow
+    if (keyPressed = 131) { // up-arrow
       do currentPiece.rotate(board);
     }
-    if (Keyboard.keyPressed() = 133) { // down-arrow
+    if (keyPressed = 133) { // down-arrow
       return moveDown();
     }
     return true;
