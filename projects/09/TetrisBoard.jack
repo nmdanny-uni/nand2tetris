@@ -216,16 +216,22 @@ class TetrisBoard {
     return true;
   }
 
-  /** Clears the given row. */
+  /** Clears the row at index 'y', shifting all squares above it one unit down. */
   method void clearLine(int y) {
     var int x;
-    var TetrisSquare curSquare;
-    let x = 0;
-    while (x < numCols) {
-      let curSquare = grid[x + (y * numCols)];
-      do curSquare.setMode(0);
-      let x = x + 1;
+    var TetrisSquare curSquare, squareAbove;
+    while (y > 1) {
+      let x = 0;
+      while (x < numCols) {
+        let curSquare = grid[x + (y * numCols)];
+        let squareAbove = grid[x + ((y-1) * numCols)];
+        do curSquare.setMode(squareAbove.getMode());
+
+        let x = x + 1;
+      }
+      let y = y - 1;
     }
+    do drawLightBorder();
     return;
   }
 
