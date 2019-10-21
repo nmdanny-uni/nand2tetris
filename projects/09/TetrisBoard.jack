@@ -54,23 +54,40 @@ class TetrisBoard {
     return this;
   }
 
-  /** Sets the square at the (x,y) coordinate in the grid to be black if active,
-      otherwise white.
+  /** Sets the square at the (x,y) coordinate in the grid to the given mode.
+      See TetrisSquare documentation for explanation about modes.
   */
-  method void setActive(int x, int y, boolean active) {
+  method void setMode(int x, int y, int mode) {
     var TetrisSquare square;
-    if (x < 0 | y < 0 | x > (numCols - 1) | y > (numRows - 1)) {
-      do Output.printString("TetrisBoard.setActive() accessed coordinates out of bounds");
-      return;
+    if ((x < 0) | (y < 0) | (x > (numCols - 1)) | (y > (numRows - 1))) {
+      do Output.printString("TetrisBoard.setMode() accessed coordinates out of bounds");
+      do Sys.halt();
+    }
+    if ((mode < 0) | (mode > 2)) {
+      do Output.printString("TetrisBoard.setMode() got invalid mode");
+      do Sys.halt();
     }
     let square = grid[x + (y * numCols)];
-    do square.setActive(active);
+    do square.setMode(mode);
     return;
+  }
+
+
+  /** Returns true if the given coordinate is occupied by a placed block(mode = 2)
+      OR if it's out of bounds
+  */
+  method boolean isOccupied(int x, int y) {
+    var TetrisSquare square;
+    if ((x < 0) | (y < 0) | (x > (numCols - 1)) | (y > (numRows - 1))) {
+      return true;
+    }
+    let square = grid[x + (y * numCols)];
+    return square.getMode() = 2;
   }
 
   /** Draws/updates all squares on screen.
       Note, this is a heavy method, it should only be ran at the start of the game.
-      Use the more granular 'setActive' method to toggle specific squares that move.
+      Use the more granular 'setMode' method to toggle specific squares that move.
   */
   method void draw() {
     var int i;
@@ -87,7 +104,6 @@ class TetrisBoard {
     do Screen.drawRectangle(0, startingRow, 511, 255);
     do Screen.setColor(false);
     do Screen.drawRectangle(borderWidth, startingRow + borderWidth, 511 - borderWidth, 255 - borderWidth);
-    
 
     // draw all squares
     let i = 0;

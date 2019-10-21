@@ -102,10 +102,17 @@ class TetrisPiece {
   method void draw(TetrisBoard board, boolean active) {
     var Array occupied;
     var int i;
+    var int mode;
+
+    let mode = 0;
+    if (active) {
+      let mode = 1;
+    }
+
     let occupied = getOccupiedCoordinates();
     let i = 0;
     while (i < 4) {
-      do board.setActive(occupied[i*2], occupied[(i*2) + 1], active);
+      do board.setMode(occupied[i*2], occupied[(i*2) + 1], mode);
       let i = i + 1;
     }
     do occupied.dispose();

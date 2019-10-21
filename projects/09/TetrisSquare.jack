@@ -1,22 +1,25 @@
 /** A single square of a tetris board, which is the smallest unit in the game.
     Once constructed, the square itself doesn't move, but rather, moving can be
-    emulated by toggling relevant squares on and off (this is the responsibility
-    of the TetrisPiece class)
+    emulated by changing the mode of the square, which affects its appearance.
 
     In essence, a TetrisSquare is very similar to a pixel, but scaled and belongs to a tetris grid.
+    A TetrisSquare has 3 possible modes:
+    mode = 0: inactive (white)
+    mode = 1: active, occupied by a TetrisPiece (player controlled)
+    mode = 2: active, a placed block that may be collided with
 */
 class TetrisSquare {
   // coordinates of top-left corner of square
   field int x, y;
 
-  // true if black, false if white
-  field boolean active;
+  // see above for explanation of modes
+  field int mode;
 
   /**
      Creates an inactive square originating at the given top-left coordinates
   */
   constructor TetrisSquare new(int setX, int setY) {
-    let active = false;
+    let mode = 0;
     let x = setX;
     let y = setY;
     return this;
@@ -34,29 +37,30 @@ class TetrisSquare {
     let height = TetrisSquare.getHeight();
     let padding = TetrisSquare.getPadding();
 
-    // draw the padding
-    do Screen.setColor(~active);
+    // draw the padding (for placed blocks, I'll ignore padding for now)
+    do Screen.setColor(mode = 0); // inverse color of below
     do Screen.drawRectangle(x, y, x + height, y + height);
 
-    // draw the square
-    do Screen.setColor(active);
+    // draw the square (black if active, white if inactive)
+    do Screen.setColor(~(mode = 0));
     do Screen.drawRectangle(x + padding, y + padding, x + height - padding, y + height - padding);
     return;
   }
 
-  /** Turns the square on or off, re-drawing it.
-   */
-  method void setActive(boolean newActive) {
-    let active = newActive;
+  /** Changes the mode of the square and re-draws it */
+  method void setMode(int newMode) {
+    let mode = newMode;
     do draw();
     return;
   }
 
-  /** Returns true if the square is active(black), false for white.
-   */
-  method boolean getActive(){
-    return active;
+  /** Returns the current mode of the square */
+  method int getMode() {
+    return mode;
   }
+
+
+  // constant accessors:
 
   /**
      Returns the height/width of a square.
