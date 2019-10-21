@@ -44,6 +44,7 @@ class TetrisController {
       returns false when restarting/quitting, otherwise true.
   */
   method boolean processInput() {
+    var boolean wentDown;
     if (Keyboard.keyPressed() = 81) { // Q button
       do GameScreens.showQuittingScreen(score);
       return false;
@@ -63,7 +64,10 @@ class TetrisController {
       do currentPiece.rotate(board);
     }
     if (Keyboard.keyPressed() = 133) { // down-arrow
-      do currentPiece.move(board, 0, 1);
+      let wentDown = currentPiece.move(board, 0, 1);
+      if (~wentDown) {
+        do placePiece();
+      }
     }
     return true;
   }
@@ -79,6 +83,24 @@ class TetrisController {
                                        Util.getNumberInRange(0, 4),
                                        3, 0);
     do currentPiece.draw(board, true);
+    return;
+  }
+
+  /** Places the current piece on the map, and creates a new piece. */
+  method void placePiece() {
+    // occupiedSquares is a 4x2 matrix, first col for 'x' coords and second for 'y'
+    var Array occupiedSquares;
+    var int xCord, yCord;
+    var int coordIx;
+    let coordIx = 0;
+    let occupiedSquares = currentPiece.getOccupiedCoordinates();
+    while (coordIx < 4) {
+      let xCord = occupiedSquares[coordIx * 2];
+      let yCord = occupiedSquares[(coordIx * 2) + 1];
+      do board.setMode(xCord, yCord, 2); // mode 2 = placed block
+      let coordIx = coordIx + 1;
+    }
+    do createNewPiece();
     return;
   }
 
