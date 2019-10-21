@@ -3,48 +3,28 @@
     Uses singleton for global access
 */
 class Random {
-  field int seed;
+  static int seed;
 
   // RNG parameters
-  field int a;
-  field int b;
-  field int c;
+  static int a;
+  static int b;
+  static int c;
 
-  static Random instance;
-
-  constructor Random new(int setSeed) {
+  /** Initializes the PRNG with given seed */
+  function void init(int setSeed) {
     let seed = setSeed;
     let a = 7;
     let b = 9;
     let c = 8;
-    return this;
+    return;
   }
 
-  /** Internal method that obtains a random, non-negative number.
-      Prefer using the static method instead */
-  method int _getNumber(){
+
+  /** Obtains a random signed int */
+  function int getNumber(){
     let seed = Util.xor(seed, Util.leftShift(seed, a));
     let seed = Util.xor(seed, Util.rightShift(seed, b));
     let seed = Util.xor(seed, Util.leftShift(seed, c));
     return seed;
-  }
-
-  /** Obtains a random number */
-  function int getNumber() {
-    if (instance = 0) {
-      let instance = Random.new(1337);
-    }
-    return instance._getNumber();
-  }
-
-  /** Sets the global seed to a new one */
-  function void setSeed(int newSeed) {
-    let instance = Random.new(newSeed);
-    return;
-  }
-
-  method void dispose() {
-    do Memory.deAlloc(this);
-    return;
   }
 }

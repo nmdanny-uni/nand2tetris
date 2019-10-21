@@ -2,6 +2,7 @@ class Main {
 
   function void main() {
     var TetrisController controller;
+    do Random.init(1337); // seed
     do Util.initPowersOf2();
 
     if (~Tests.runAllTests()) {
