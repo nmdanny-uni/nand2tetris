@@ -8,9 +8,7 @@
     offsets and other effects such as square padding..
 */
 class TetrisBoard {
-  field int startingRow;
   field int score;
-  field int borderWidth;
 
   // a 2D matrix (using a 1D array via row major order) representing occupied/clear tetris
   // squares. The square at (x, y) can be accessed via grid[x + (y * numCols)]
@@ -27,13 +25,11 @@ class TetrisBoard {
   constructor TetrisBoard new() {
     var int x, y;
     var int i;
-    let startingRow = 12;
-    let borderWidth = 5;
     let score = 0;
 
     // Shift our board so that there'll be space for extra stuff & information
-    let tlX = 400;
-    let tlY = startingRow + (borderWidth * 2);
+    let tlX = 380;
+    let tlY = 12;
 
     // Set game dimensions
     let numRows = TetrisBoard.getNumRows();
@@ -77,6 +73,10 @@ class TetrisBoard {
     }
     let square = grid[x + (y * numCols)];
     do square.setMode(mode);
+    // don't always redraw the light border as it will flicker a lot
+    if (isTouchingBorder(x, y)) {
+      do drawLightBorder();
+    }
     return;
   }
 
@@ -114,6 +114,47 @@ class TetrisBoard {
     return mask;
   }
 
+  /** Draws the big border around the tetris board.
+      Should only be run once
+  */
+  method void drawThickBorder() {
+    var int squareHeight, borderWidth, borderDist;
+    let borderWidth = 6;
+    let borderDist = 2;
+    let squareHeight = TetrisSquare.getHeight();
+    do Screen.setColor(true);
+    do Screen.drawRectangle(tlX - borderWidth, tlY - borderWidth,
+                            tlX + (numCols * squareHeight) + borderWidth,
+                            tlY + (numRows * squareHeight) + borderWidth);
+
+    do Screen.setColor(false);
+    do Screen.drawRectangle(tlX - borderDist, tlY - borderDist,
+                            tlX + (numCols * squareHeight) + borderDist,
+                            tlY + (numRows * squareHeight) + borderDist);
+    return;
+
+  }
+
+  /** This creates the thin border around the board, which may get
+      ruined when an active square hugs one of the board's edges.
+  */
+  method void drawLightBorder() {
+    var int squareHeight;
+    let squareHeight = TetrisSquare.getHeight();
+    do Screen.setColor(true);
+    do Screen.drawLine(tlX, tlY, tlX + (squareHeight * numCols), tlY);
+    do Screen.drawLine(tlX, tlY, tlX, tlY + (squareHeight * numRows));
+    do Screen.drawLine(tlX + (squareHeight * numCols), tlY, tlX + (squareHeight * numCols), tlY + (squareHeight * numRows));
+    do Screen.drawLine(tlX, tlY + (squareHeight * numRows), tlX + (squareHeight * numCols), tlY + (squareHeight * numRows));
+    return;
+  }
+
+  /** Returns true if the square at the given coordinates is touching the board's
+      edges. */
+  method boolean isTouchingBorder(int x, int y) {
+    return (((x = 0) | (x = (numCols - 1))) | ((y = 0) | (y = (numRows - 1))));
+  }
+
   /** Draws/updates all squares on screen.
       Note, this is a heavy method, it should only be ran at the start of the game.
       Use the more granular 'setMode' method to toggle specific squares that move.
@@ -124,6 +165,8 @@ class TetrisBoard {
     do Screen.clearScreen();
 
     // drawing game border
+    do drawThickBorder();
+    do drawLightBorder();
 
     // draw all squares
     let i = 0;
