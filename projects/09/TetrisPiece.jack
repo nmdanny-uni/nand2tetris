@@ -1,3 +1,7 @@
+/** Represents the current Tetris piece (tetromino) being controlled by the player.
+    Contains methods that allow moving and rotating it via the TetrisBoard, and also
+    contains methods to deal with collision checks.
+*/
 class TetrisPiece {
   // A matrix of shapes, each row represents a different shape,
   // and each column represents a different rotation of shape. Going right in the matrix gives you
@@ -77,23 +81,6 @@ class TetrisPiece {
     return array;
   }
 
-  /** Getters and setters for X,Y coordinates of the top-left
-      corner of the shape
-  */
-
-  method int getTopLeftX() {
-    return tlX;
-  }
-
-  method int getTopLeftY() {
-    return tlY;
-  }
-
-  method void setTopLeftCoordinates(int newX, int newY) {
-    let tlX = newX;
-    let tlY = newY;
-    return;
-  }
 
   /** Draws the piece to the given board (if active), or un-draws it (if inactive)
   */
