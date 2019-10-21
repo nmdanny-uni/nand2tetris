@@ -94,31 +94,15 @@ class TetrisBoard {
 
     let curBit = 0;
     let y = tlY;
-    do Output.moveCursor(5, 24);
-    do Output.printString("Testing 4x4 grid at x=");
-    do Output.printInt(tlX);
-    do Output.printString(" y=");
-    do Output.printInt(tlY);
-    do Output.println();
     while (y < (tlY + 4)) {
       let x = tlX;
       while (x < (tlX + 4)) {
         if (areCoordinatesNotInBounds(x, y)) {
-          do Output.printString("Coord OOB at x=");
-          do Output.printInt(x);
-          do Output.printString(" y=");
-          do Output.printInt(y);
-          do Output.println();
           let mask = Util.setBit(mask, curBit);
         }
         else {
           let square = grid[x + (y * numCols)];
           if (square.getMode() = 2) {
-            do Output.printString("Coord OCC at x=");
-            do Output.printInt(x);
-            do Output.printString(" y=");
-            do Output.printInt(y);
-            do Output.println();
             let mask = Util.setBit(mask, curBit);
           }
         }
@@ -139,16 +123,7 @@ class TetrisBoard {
     var TetrisSquare curSquare;
     do Screen.clearScreen();
 
-    // drawing score (textual interface)
-    do Output.printString("Score: ");
-    do Output.printInt(score);
-    do Output.println();
-
     // drawing game border
-    do Screen.setColor(true);
-    do Screen.drawRectangle(0, startingRow, 511, 255);
-    do Screen.setColor(false);
-    do Screen.drawRectangle(borderWidth, startingRow + borderWidth, 511 - borderWidth, 255 - borderWidth);
 
     // draw all squares
     let i = 0;

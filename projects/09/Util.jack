@@ -104,7 +104,6 @@ class Util {
     let randomNumber = Util.abs(Random.getNumber());
     let modulus = Util.abs(Util.modulus(randomNumber, endExclusive-start));
     let result = start + modulus;
-    do Output.printInt(randomNumber);
     if ((result < start) | (result > (endExclusive - 1))) {
       do Output.printString("getNumberInRange(");
       do Output.printInt(start);

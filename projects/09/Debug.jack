@@ -2,7 +2,7 @@ class Debug {
   function void displayShape(int shapeEncoding) {
     var int x, y, curBit;
 
-    do Output.printString("----");
+    do Output.printString("------");
     do Output.println();
 
     let curBit = 0;
@@ -24,7 +24,7 @@ class Debug {
       let y = y + 1;
     }
 
-    do Output.printString("----");
+    do Output.printString("------");
     do Output.println();
     return;
   }

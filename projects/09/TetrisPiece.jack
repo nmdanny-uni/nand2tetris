@@ -43,8 +43,6 @@ class TetrisPiece {
     let shapeNum = setShapeNum;
     let shapeRotation = setShapeRotation;
     let shapeEncoding = shapes[(shapeNum * 4) + shapeRotation];
-    do Output.printString("Shape encoding: ");
-    do Output.printInt(shapeEncoding);
     let tlX = x;
     let tlY = y;
     return this;
@@ -181,16 +179,15 @@ class TetrisPiece {
     var int newShapeEncoding, occupancyMask;
     let newShapeEncoding = shapes[(curShapeNum * 4) + newRotation];
     let occupancyMask = board.get4x4GridOccupancyMask(newTlX, newTlY);
+    // TODO: there's an OS bug regarding string disposal, printing all these strings is bad
     do Output.moveCursor(0, 0);
-    do Output.printString("ensureNoCollision:");
-    do Output.println();
-    do Output.printString("tested encoding: ");
+    do Output.printString("shape");
     do Output.println();
     do Debug.displayShape(newShapeEncoding);
-    do Output.printString("occupancy mask: ");
+    do Output.printString("occ");
     do Output.println();
     do Debug.displayShape(occupancyMask);
-    do Output.printString("ANDing: ");
+    do Output.printString("and");
     do Output.println();
     do Debug.displayShape(occupancyMask & newShapeEncoding);
     return ((occupancyMask & newShapeEncoding) = 0);
