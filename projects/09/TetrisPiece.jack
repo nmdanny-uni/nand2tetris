@@ -94,7 +94,7 @@ class TetrisPiece {
       let mode = 1;
     }
 
-    let occupied = getOccupiedCoordinates();
+    let occupied = getOccupiedCoordinates(); // allocates a temporary array
     let i = 0;
     while (i < 4) {
       do board.setMode(occupied[i*2], occupied[(i*2) + 1], mode);
@@ -194,7 +194,7 @@ class TetrisPiece {
 
   /** Populates the shapes array. */
   method void populateShapes() {
-    if (~(shapes = 0)) {
+    if (~(shapes = null)) {
       return;
     }
     let shapes = Array.new(7 * 4);

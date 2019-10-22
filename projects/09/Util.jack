@@ -7,7 +7,6 @@ class Util {
 
   /** Initializes the above array, must be run at program init */
   function void initPowersOf2() {
-    //let powersOf2 = Array.new(1);
     let powersOf2 = Array.new(16);
     let powersOf2[0] = 1;
     let powersOf2[1] = 2;

@@ -24,7 +24,7 @@ class TetrisController {
     do Output.moveCursor(0, 0);
     do Screen.clearScreen();
 
-    if (~(board = 0)) {
+    if (~(board = null)) {
       do board.dispose();
     }
     let board = TetrisBoard.new();
@@ -40,8 +40,12 @@ class TetrisController {
   }
 
   method void dispose() {
-    do board.dispose();
-    do currentPiece.dispose();
+    if (~(board = null)) {
+      do board.dispose();
+    }
+    if (~(currentPiece = null)) {
+      do currentPiece.dispose();
+    }
     do Memory.deAlloc(this);
     return;
   }
@@ -84,7 +88,7 @@ class TetrisController {
       Returns false if there's no space for the new piece (loss condition)
   */
   method boolean createNewPiece() {
-    if (~(currentPiece = 0)) {
+    if (~(currentPiece = null)) {
       do currentPiece.dispose();
     }
     let currentPiece = TetrisPiece.new(
