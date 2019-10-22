@@ -99,12 +99,8 @@ Some of the most interesting implementation details:
   for the Y axis. (A more OOPy way would've been to define a 'Coordinate' type, but it seemed overkill)
 
 - Pseudo-random number generation:
-  I've chosen to use 'xorshift' algorithm for PRNG, which seems to produce acceptable results. This required implementing
-  several bitwise operations in the 'Util' module (some were also essential for dealing with the shape encoding described above).
-  Constraining the randomly generated number to a known range is done via a modulu function(also self-implemented).
-  This solution isn't optimal, it suffers from 'modulu bias' - real PRNG implementations have a dedicated function for computing
-  a random number within range, however I believe implementing such function is out of scope for this exercise.
-
-  Another issue is the seed, which is constant(set at the main function). It is possible to prompt the user
-  for a seed, or use his initial movements as a seed, but again, for the scope of the exercise it seems good
-  enough.
+  I've chosen to use 'xorshift' algorithm for the PRNG, which seems to produce acceptable results.
+  This required implementing several bitwise operations in the 'Util' module, some were also essential for dealing
+  with the shape encoding described above.
+  The seed is initially set at compile-time, but it is updated during the first seconds of the game according
+  to the player's keyboard inputs, thus ensuring that different games have different playthroughs.

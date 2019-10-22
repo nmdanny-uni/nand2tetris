@@ -27,4 +27,10 @@ class Random {
     let seed = Util.xor(seed, Util.leftShift(seed, c));
     return seed;
   }
+
+  /** Adds the given number to the seed */
+  function void addToSeed(int delta) {
+    let seed = seed + delta;
+    return;
+  }
 }
