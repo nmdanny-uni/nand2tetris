@@ -84,7 +84,7 @@ class Tokenizer:
         """ Creates an XML tokens file for the tokenizer's jack file """
         jack_path = Path(self.__jack_path)
         file_name_no_ext = jack_path.stem
-        xml_path = jack_path.parent / f"MINE-{file_name_no_ext}T.xml"
+        xml_path = jack_path.parent / f"{file_name_no_ext}T.xml"
 
         # prettyfying the xml
         ugly_xml = ET.tostring(self.__to_xml(), 'utf-8')
