@@ -63,7 +63,6 @@ class Tokenizer:
             if not token_type:
                 raise ValueError(f"Regex match failed")
             contents = match.group(token_type)
-            file_pos = match.pos
             if token_type == "multiComment" or token_type == "comment":
                 continue
             if token_type == "integerConstant":
