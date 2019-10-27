@@ -1,21 +1,8 @@
 import logging
-import util
 from xml.etree import ElementTree as ET
 import re
-from typing import NamedTuple, Iterator, Union
-
-
-class Token(NamedTuple):
-    """ A token, also doubles as terminal nodes in the compilation engine.  """
-    type: str
-    contents: Union[str, int]  # int for an integerConstant, string otherwise
-    file_pos: int  # used for error reporting, token's position(index) in file
-
-    def to_xml(self) -> ET.Element:
-        """ Converts the token to a XML node """
-        tag = ET.Element(self.type)
-        tag.text = str(self.contents)
-        return tag
+from typing import Iterator
+from jack_node import Token
 
 
 class Tokenizer:
