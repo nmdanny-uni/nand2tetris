@@ -1,12 +1,13 @@
 
 import argparse
-import sys
 import logging
-from tokenizer import Tokenizer
-from compilation_engine import CompilationEngine
 from pathlib import Path
+
+from compilation_engine import CompilationEngine
+from tokenizer import Tokenizer
 import util
 
+args = None
 
 class JackAnalyzer:
     def __init__(self, path: str):
@@ -25,11 +26,13 @@ class JackAnalyzer:
                 tokenizer = Tokenizer(file)
                 tokens = list(tokenizer.iter_tokens())
                 engine = CompilationEngine(tokens)
-                util.write_xml_file(tokenizer.to_xml(), file, "T")
+                if args.verbose:
+                    util.write_xml_file(tokenizer.to_xml(), file, "T")
                 util.write_xml_file(engine.to_xml(), file, "")
             except Exception as ex:
                 logging.error(f"Encountered error while processing '{file}')")
                 logging.exception(ex)
+
 
 def main():
     """ Entry point to program, with support for extra debugging flags if needed """
@@ -44,6 +47,7 @@ def main():
     argparser.add_argument('-v', '--verbose',
                            action='store_true',
                            help='print debug information')
+    global args
     args = argparser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR)
 
