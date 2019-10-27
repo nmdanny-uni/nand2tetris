@@ -25,7 +25,8 @@ def process_path(path: str):
             tokenizer.create_xml_file()
             engine = CompilationEngine(list(tokenizer.iter_tokens()))
             cls = engine.parse_class()
-            logging.debug(f"parsed class: {cls}")
+        except NotImplementedError as ex:
+            logging.debug(f"NotImplementedError")
         except Exception as ex:
             logging.error(f"Encountered error while processing '{file}')")
             logging.exception(ex)

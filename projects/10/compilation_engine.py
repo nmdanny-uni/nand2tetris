@@ -78,19 +78,6 @@ class CompilationEngine:
             token = self.eat("identifier")
         return token
 
-    def eat_many(self, min_count: int, expected_type: str, *contents: str) -> List[Token]:
-        """ Tries to match 'min_count' or more tokens, returning a list of the matched
-            tokens. """
-        matches: List[Token] = []
-        for _ in range(min_count):
-            matches.append(self.eat(expected_type, *contents))
-        while self.__has_more_tokens():
-            next_token = self.eat_optional(expected_type, *contents)
-            if not next_token:
-                break
-            matches.append(next_token)
-        return matches
-
     def parse_class(self) -> Node:
         identifier = self.eat("keyword", "class")
         class_name = self.eat("identifier")
@@ -109,9 +96,15 @@ class CompilationEngine:
     def parse_class_variable_declaration(self) -> Node:
         var_decl_type = self.eat("keyword", "field", "static")
         var_type = self.eat_type()
-        var_names = self.eat_many(1, "identifier")
+        var_name = self.eat("identifier")
+        extra_tokens = []
+        while (self.matches("symbol", ",")):
+            comma = self.eat("symbol", ",")
+            next_var_name = self.eat("identifier")
+            extra_tokens.extend([comma, next_var_name])
+        semicolon = self.eat("symbol", ";")
         return Node(type="classVarDec", contents=[
-            var_decl_type, var_type, *var_names
+            var_decl_type, var_type, var_name, extra_tokens, semicolon
         ])
 
     def parse_subroutine(self) -> Node:
@@ -147,7 +140,7 @@ class CompilationEngine:
         while (self.matches("keyword", "var")):
             var_decs.append(self.parse_var_dec())
         statements = self.parse_statements()
-        body_closer = self.eat("symbol", "{")
+        body_closer = self.eat("symbol", "}")
         return Node(type="subroutineBody", contents=[body_opener, *var_decs, statements, body_closer])
 
     def parse_var_dec(self) -> Node:
@@ -186,24 +179,25 @@ class CompilationEngine:
     def parse_do(self) -> Node:
         do = self.eat("keyword", "do")
         subroutine_call = self.parse_subroutine_call()
-        return Node(type="doStatement", contents=[do, subroutine_call])
+        semicolon = self.eat("symbol", ";")
+        return Node(type="doStatement", contents=[do, subroutine_call, semicolon])
 
     def parse_subroutine_call(self) -> Node:
         raise NotImplementedError()
 
     def parse_let(self) -> Node:
+        tokens = []
         let = self.eat("keyword", "let")
         var_name = self.eat("identifier")
+        tokens.extend([let, var_name])
         if self.matches("symbol", "["):
             index_opener = self.eat("symbol", "[")
             index_expression = self.parse_expression()
             index_closer = self.eat("symbol", "]")
+            tokens.extend([index_opener, index_expression, index_closer])
         equals = self.eat("symbol", "=")
         expression = self.parse_expression()
         semicolon = self.eat("symbol", ";")
-        tokens = [let, var_name]
-        if index_opener:
-            tokens.extend([index_opener, index_expression, index_closer])
         tokens.extend([equals, expression, semicolon])
         return Node(type="letStatement", contents=tokens)
 
