@@ -27,7 +27,7 @@ def process_path(path: str):
             engine.create_xml_file()
         except Exception as ex:
             logging.error(f"Encountered error while processing '{file}')")
-            #logging.exception(ex)
+            logging.exception(ex)
 
 
 def main():

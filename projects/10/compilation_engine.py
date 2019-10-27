@@ -234,11 +234,16 @@ class CompilationEngine:
 
     def parse_while(self) -> Node:
         while_tok = self.eat("keyword", "while")
-        opener = self.eat("symbol", "(")
+        cond_opener = self.eat("symbol", "(")
+        cond_expr = self.parse_expression()
+        cond_closer = self.eat("symbol", ")")
+
+        block_opener = self.eat("symbol", "{")
         statements = self.parse_statements()
-        closer = self.eat("symbol", ")")
+        block_closer = self.eat("symbol", "}")
         return Node(type="whileStatement", contents=[
-            while_tok, opener, statements, closer])
+            while_tok, cond_opener, cond_expr, cond_closer,
+            block_opener, statements, block_closer])
 
     def parse_return(self) -> Node:
         return_tok = self.eat("keyword", "return")
@@ -260,9 +265,16 @@ class CompilationEngine:
         block_opener = self.eat("symbol", "{")
         statements = self.parse_statements()
         block_closer = self.eat("symbol", "}")
-        return Node(type="ifStatement", contents=[
-            if_tok, cond_opener, cond, cond_closer,
-            block_opener, statements, block_closer])
+        tokens = [if_tok, cond_opener, cond, cond_closer, block_opener,
+                  statements, block_closer]
+
+        if self.matches("keyword", "else"):
+            else_tok = self.eat("keyword", "else")
+            else_opener = self.eat("symbol", "{")
+            else_statements = self.parse_statements()
+            else_closer = self.eat("symbol", "}")
+            tokens.extend([else_tok, else_opener, else_statements, else_closer])
+        return Node(type="ifStatement", contents=tokens)
 
     OPERATORS = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
     UNARY_OPERATORS = ["-", "~"]
