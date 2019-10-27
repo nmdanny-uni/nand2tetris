@@ -27,7 +27,8 @@ def process_path(path: str):
             cls = engine.parse_class()
             logging.debug(f"parsed class: {cls}")
         except Exception as ex:
-            logging.error(f"Encountered error while processing '{file}:\n{str(ex)}'")
+            logging.error(f"Encountered error while processing '{file}')")
+            logging.exception(ex)
 
 
 def main():
