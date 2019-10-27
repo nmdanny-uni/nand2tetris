@@ -26,13 +26,16 @@ do
   for xmlPath in $i/*.xml;
   do
       xml=`basename $xmlPath .xml`
+      myXml=$CMP_DIR/$jackFolder/$xml.xml
       echo "   Comparing $xml"
-      execOut=$(diff -w $xmlPath $CMP_DIR/$jackFolder/$xml.xml)
+      execOut=$(diff -w $xmlPath $myXml)
       if [[ $execOut == "" ]]  # on success, diff should be empty
       then
           SUCC=$((SUCC+1))
       else
-          echo "Failed when testing $xml"
+          echo "Failed when testing $xml: diff mismatch between $xmlPath and $myXml"
+          echo "To see the difference, type:"
+          echo "diff -w $xmlPath $myXml"
           FAIL=$((FAIL+1))
       fi;
 
