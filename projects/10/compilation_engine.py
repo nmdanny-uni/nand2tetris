@@ -1,8 +1,8 @@
-from tokenizer import Token
+from tokenizer import Token, Tokenizer
 from typing import Optional, NamedTuple, Iterator, List, Dict, Union
 from xml.etree import ElementTree as ET
 import logging
-
+import util
 
 class Node(NamedTuple):
     type: str
@@ -16,11 +16,12 @@ class Node(NamedTuple):
 
 
 class CompilationEngine:
-    def __init__(self, tokens: List[Token]):
-        self.__tokens = tokens
+    def __init__(self, jack_file: str):
+        tokenizer = Tokenizer(jack_file)
+        self.__jack_path = jack_file
+        self.__tokens = list(tokenizer.iter_tokens())
         self.__ix = 0
-        cls = self.parse_class()
-        logging.error(f"class: {cls}")
+        self.__parsed_class = self.parse_class()
 
     def __has_more_tokens(self) -> bool:
         """ Returns true if there are more tokens to eat """
@@ -98,13 +99,13 @@ class CompilationEngine:
         var_type = self.eat_type()
         var_name = self.eat("identifier")
         extra_tokens = []
-        while (self.matches("symbol", ",")):
+        while self.matches("symbol", ","):
             comma = self.eat("symbol", ",")
             next_var_name = self.eat("identifier")
             extra_tokens.extend([comma, next_var_name])
         semicolon = self.eat("symbol", ";")
         return Node(type="classVarDec", contents=[
-            var_decl_type, var_type, var_name, extra_tokens, semicolon
+            var_decl_type, var_type, var_name, *extra_tokens, semicolon
         ])
 
     def parse_subroutine(self) -> Node:
@@ -121,23 +122,24 @@ class CompilationEngine:
         ])
 
     def parse_parameter_list(self) -> Node:
+        if self.matches("symbol", ")"):
+            return Node(type="parameterList", contents=[])
         tokens = []
-        if not self.matches("symbol", ")"):
-            first_type = self.eat_type()
-            first_var = self.eat("identifier")
-            tokens.extend([first_type, first_var])
-            while self.matches("symbol", ","):
-                comma = self.eat("symbol", ",")
-                next_type = self.eat_type()
-                next_var = self.eat("identifier")
-                tokens.extend([comma, next_type, next_var])
+        first_type = self.eat_type()
+        first_var = self.eat("identifier")
+        tokens.extend([first_type, first_var])
+        while self.matches("symbol", ","):
+            comma = self.eat("symbol", ",")
+            next_type = self.eat_type()
+            next_var = self.eat("identifier")
+            tokens.extend([comma, next_type, next_var])
 
         return Node(type="parameterList", contents=tokens)
 
     def parse_subroutine_body(self) -> Node:
         body_opener = self.eat("symbol", "{")
         var_decs = []
-        while (self.matches("keyword", "var")):
+        while self.matches("keyword", "var"):
             var_decs.append(self.parse_var_dec())
         statements = self.parse_statements()
         body_closer = self.eat("symbol", "}")
@@ -178,12 +180,41 @@ class CompilationEngine:
 
     def parse_do(self) -> Node:
         do = self.eat("keyword", "do")
-        subroutine_call = self.parse_subroutine_call()
+        subroutine_call_tokens = self.parse_subroutine_call()
         semicolon = self.eat("symbol", ";")
-        return Node(type="doStatement", contents=[do, subroutine_call, semicolon])
+        return Node(type="doStatement", contents=[do, *subroutine_call_tokens, semicolon])
 
-    def parse_subroutine_call(self) -> Node:
-        raise NotImplementedError()
+    def parse_subroutine_call(self, identifier=None) -> List[Token]:
+        """ Parses a subroutine call, optionally using a pre-existing identifier
+            token if it was eaten already.
+
+            NOTE: this returns a list of nodes, not  wrapped in extra structure
+                  like the rest of the methods
+        """
+        if not identifier:
+            identifier = self.eat("identifier")
+
+        if self.matches("symbol", "("):
+            # we are perform a subroutine call, (where 'identifier' is a
+            # local method)
+            args_opener = self.eat("symbol", "(")
+            args = self.parse_expression_list()
+            args_closer = self.eat("symbol", ")")
+            return [identifier, args_opener, args, args_closer]
+
+        elif self.matches("symbol", "."):
+            # we are performing a subroutine call, where 'identifier' is a class
+            # variable in case of a method call, or class identifier in case of
+            # a static method/constructor call
+            dot = self.eat("symbol", ".")
+            subroutine_name = self.eat("identifier")
+            args_opener = self.eat("symbol", "(")
+            args = self.parse_expression_list()
+            args_closer = self.eat("symbol", ")")
+            return [identifier, dot, subroutine_name, args_opener, args, args_closer]
+        else:
+            raise ValueError("Failed to parse subroutine call")
+
 
     def parse_let(self) -> Node:
         tokens = []
@@ -233,14 +264,75 @@ class CompilationEngine:
             if_tok, cond_opener, cond, cond_closer,
             block_opener, statements, block_closer])
 
+    OPERATORS = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
+    UNARY_OPERATORS = ["-", "~"]
+    KEYWORD_CONSTANTS = ["true", "false", "null", "this"]
+
     def parse_expression(self) -> Node:
-        raise NotImplementedError()
-        return Node(type="expression", contents=[])
+        tokens = [self.parse_term()]
+        while self.matches("symbol", *CompilationEngine.OPERATORS):
+            tokens.append(self.eat("symbol", *CompilationEngine.OPERATORS))
+            tokens.append(self.parse_term())
+        return Node(type="expression", contents=tokens)
 
     def parse_term(self) -> Node:
-        raise NotImplementedError()
-        return Node(type="term", contents=[])
+        # trivial cases where we have an integer/string/keyword constant
+        token = self.eat_optional("integerConstant")
+        if token:
+            return Node(type="term", contents=[token])
 
-    def compile_expression_list(self) -> Node:
-        raise NotImplementedError()
-        return Node(type="expressionList", contents=[])
+        token = self.eat_optional("stringConstant")
+        if token:
+            return Node(type="term", contents=[token])
+
+        token = self.eat_optional("keyword", *CompilationEngine.KEYWORD_CONSTANTS)
+        if token:
+            return Node(type="term", contents=[token])
+
+        if self.matches("symbol", "("):
+            # we have a sub-expression
+            expr_opener = self.eat("symbol", "(")
+            expr = self.parse_expression()
+            expr_closer = self.eat("symbol", ")")
+            return Node(type="term", contents=[expr_opener, expr, expr_closer])
+
+
+        if self.matches("symbol", *CompilationEngine.UNARY_OPERATORS):
+            # we have a unary operation
+            unary_op = self.eat("symbol", *CompilationEngine.UNARY_OPERATORS)
+            term = self.parse_term()
+            return Node(type="term", contents=[unary_op, term])
+
+        # we have 3 different possibilities involving an identifier
+        identifier = self.eat("identifier")
+        if self.matches("symbol", "["):
+            # we are array-indexing (where 'identifier' is an array)
+            index_opener = self.eat("symbol", "[")
+            index_expr = self.parse_expression()
+            index_closer = self.eat("symbol", "]")
+            return Node(type="term", contents=[
+                identifier, index_opener, index_expr, index_closer
+            ])
+            pass
+        elif self.matches("symbol", "(", "."):
+            # we are performing a subroutine call
+            tokens = self.parse_subroutine_call(identifier=identifier)
+            return Node(type="term", contents=tokens)
+        else:
+            # we have a plain variable reference
+            return Node(type="term", contents=[identifier])
+
+
+    def parse_expression_list(self) -> Node:
+        if self.matches("symbol", ")"):
+            return Node(type="expressionList", contents=[])
+
+        tokens = [self.parse_expression()]
+        while self.matches("symbol", ","):
+            tokens.append(self.eat("symbol", ","))
+            tokens.append(self.parse_expression())
+        return Node(type="expressionList", contents=tokens)
+
+    def create_xml_file(self):
+        """ Creates an XML file for the parse tree"""
+        util.write_xml_file(self.__parsed_class.to_xml(), self.__jack_path, "")

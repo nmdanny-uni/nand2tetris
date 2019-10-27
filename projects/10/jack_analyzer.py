@@ -23,13 +23,11 @@ def process_path(path: str):
         try:
             tokenizer = Tokenizer(file)
             tokenizer.create_xml_file()
-            engine = CompilationEngine(list(tokenizer.iter_tokens()))
-            cls = engine.parse_class()
-        except NotImplementedError as ex:
-            logging.debug(f"NotImplementedError")
+            engine = CompilationEngine(file)
+            engine.create_xml_file()
         except Exception as ex:
             logging.error(f"Encountered error while processing '{file}')")
-            logging.exception(ex)
+            #logging.exception(ex)
 
 
 def main():
