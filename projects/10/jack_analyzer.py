@@ -5,30 +5,31 @@ import logging
 from tokenizer import Tokenizer
 from compilation_engine import CompilationEngine
 from pathlib import Path
+import util
 
 
 class JackAnalyzer:
-    def __init__(self, input: str):
-        pass
+    def __init__(self, path: str):
+        """ Creates an analyzer for a .jack file, or a folder containing
+            a jack program. """
+        self.__files = []
+        if Path(path).is_file():
+            self.__files.append(path)
+        else:
+            self.__files.extend(list(Path(path).glob("*.jack")))
 
-
-def process_path(path: str):
-    """ Process a .jack file, or a folder containing .jack files"""
-    files = []
-    if Path(path).is_file():
-        files.append(path)
-    else:
-        files.extend(list(Path(path).glob("*.jack")))
-    for file in files:
-        try:
-            tokenizer = Tokenizer(file)
-            tokenizer.create_xml_file()
-            engine = CompilationEngine(file)
-            engine.create_xml_file()
-        except Exception as ex:
-            logging.error(f"Encountered error while processing '{file}')")
-            logging.exception(ex)
-
+    def run(self):
+        """ Runs the analyzer, emitting XML files in the process"""
+        for file in self.__files:
+            try:
+                tokenizer = Tokenizer(file)
+                tokens = list(tokenizer.iter_tokens())
+                engine = CompilationEngine(tokens)
+                util.write_xml_file(tokenizer.to_xml(), file, "T")
+                util.write_xml_file(engine.to_xml(), file, "")
+            except Exception as ex:
+                logging.error(f"Encountered error while processing '{file}')")
+                logging.exception(ex)
 
 def main():
     """ Entry point to program, with support for extra debugging flags if needed """
@@ -46,7 +47,8 @@ def main():
     args = argparser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR)
 
-    process_path(args.input)
+    analyzer = JackAnalyzer(args.input)
+    analyzer.run()
 
 if __name__ == '__main__':
     main()

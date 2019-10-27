@@ -75,13 +75,9 @@ class Tokenizer:
                     token_type = "identifier"
             yield Token(token_type, contents, match.start())
 
-    def __to_xml(self) -> ET.Element:
+    def to_xml(self) -> ET.Element:
         """ Returns the XML representation of the tokenized output """
         tokens = ET.Element("tokens")
         for token in self.iter_tokens():
             tokens.append(token.to_xml())
         return tokens
-
-    def create_xml_file(self):
-        """ Creates an XML tokens file for the tokenizer's jack file """
-        util.write_xml_file(self.__to_xml(), self.__jack_path, "T")

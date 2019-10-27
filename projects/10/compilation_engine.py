@@ -2,7 +2,7 @@ from tokenizer import Token, Tokenizer
 from typing import Optional, NamedTuple, Iterator, List, Dict, Union
 from xml.etree import ElementTree as ET
 import logging
-import util
+
 
 class Node(NamedTuple):
     type: str
@@ -16,10 +16,10 @@ class Node(NamedTuple):
 
 
 class CompilationEngine:
-    def __init__(self, jack_file: str):
-        tokenizer = Tokenizer(jack_file)
-        self.__jack_path = jack_file
-        self.__tokens = list(tokenizer.iter_tokens())
+    """ Responsible for parsing a list of jack tokens"""
+    def __init__(self, tokens: List[Token]):
+        """ Creates and runs the parser. """
+        self.__tokens = tokens
         self.__ix = 0
         self.__parsed_class = self.parse_class()
 
@@ -215,7 +215,6 @@ class CompilationEngine:
         else:
             raise ValueError("Failed to parse subroutine call")
 
-
     def parse_let(self) -> Node:
         tokens = []
         let = self.eat("keyword", "let")
@@ -308,7 +307,6 @@ class CompilationEngine:
             expr_closer = self.eat("symbol", ")")
             return Node(type="term", contents=[expr_opener, expr, expr_closer])
 
-
         if self.matches("symbol", *CompilationEngine.UNARY_OPERATORS):
             # we have a unary operation
             unary_op = self.eat("symbol", *CompilationEngine.UNARY_OPERATORS)
@@ -334,7 +332,6 @@ class CompilationEngine:
             # we have a plain variable reference
             return Node(type="term", contents=[identifier])
 
-
     def parse_expression_list(self) -> Node:
         if self.matches("symbol", ")"):
             return Node(type="expressionList", contents=[])
@@ -345,6 +342,9 @@ class CompilationEngine:
             tokens.append(self.parse_expression())
         return Node(type="expressionList", contents=tokens)
 
-    def create_xml_file(self):
-        """ Creates an XML file for the parse tree"""
-        util.write_xml_file(self.__parsed_class.to_xml(), self.__jack_path, "")
+
+    def to_xml(self) -> ET.Element:
+        """ Returns the XML representation of the parse tree represented
+            by the file's parse tree """
+        return self.__parsed_class.to_xml()
+
