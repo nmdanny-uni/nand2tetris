@@ -1,7 +1,6 @@
 import logging
+import util
 from xml.etree import ElementTree as ET
-from xml.dom import minidom
-from pathlib import Path
 import re
 from typing import NamedTuple, Iterator, Union
 
@@ -85,17 +84,4 @@ class Tokenizer:
 
     def create_xml_file(self):
         """ Creates an XML tokens file for the tokenizer's jack file """
-        jack_path = Path(self.__jack_path)
-        file_name_no_ext = jack_path.stem
-        xml_path = jack_path.parent / f"{file_name_no_ext}T.xml"
-
-        # prettifying the xml (needed in order to pass diff test)
-        ugly_xml = ET.tostring(self.__to_xml(), 'utf-8')
-        pretty_xml = minidom.parseString(ugly_xml).toprettyxml()
-
-        # remove XML version header
-        pretty_xml = re.sub(r'<\?xml .*?>\n', '',  pretty_xml)
-
-        with open(xml_path, 'w') as file:
-            file.write(pretty_xml)
-            logging.debug(pretty_xml)
+        util.write_xml_file(self.__to_xml(), self.__jack_path, "T")
