@@ -23,12 +23,24 @@ class JackAnalyzer:
         """ Runs the analyzer, emitting XML files in the process"""
         for file in self.__files:
             try:
-                tokenizer = Tokenizer(file)
-                tokens = list(tokenizer.iter_tokens())
-                engine = CompilationEngine(tokens)
+                # emit raw tokenizer output
                 if args.verbose:
+                    tokenizer = Tokenizer(file)
                     util.write_xml_file(tokenizer.to_xml(), file, "T")
-                util.write_xml_file(engine.to_xml(), file, "")
+
+                with CompilationEngine(file) as engine:
+                    # emit ex10 .xml
+                    if not args.compile:
+                        engine.emit_xml(semantic=False)
+
+                    # emit ex11 .xml with semantic information only when debugging
+                    if args.compile and args.verbose:
+                        engine.emit_xml(semantic=True)
+
+                    # emit ex11 .vm
+                    if args.compile:
+                        engine.emit_vm()
+
             except Exception as ex:
                 logging.error(f"Encountered error while processing '{file}')")
                 logging.exception(ex)
@@ -47,6 +59,12 @@ def main():
     argparser.add_argument('-v', '--verbose',
                            action='store_true',
                            help='print debug information')
+    # basically toggles ex11,  in this mode, .xml isn't emitted UNLESS
+    # verbose flag is on. (in which case, extra semantic markup will be added
+    # too)
+    argparser.add_argument('-c', '--compile',
+                           action='store_true',
+                           help='emit .vm instead of .xml')
     global args
     args = argparser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.ERROR)

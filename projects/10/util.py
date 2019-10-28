@@ -30,4 +30,3 @@ def write_xml_file(root_elem: ET.Element, jack_file: str, suffix: str):
 
     with open(xml_path, 'w') as file:
         file.write(pretty_xml)
-        logging.debug(pretty_xml)

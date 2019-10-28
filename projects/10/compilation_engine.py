@@ -1,8 +1,11 @@
 from typing import Optional, NamedTuple, Iterator, List, Dict, Union
 from xml.etree import ElementTree as ET
 import logging
-from jack_node import Node, Token, NonTerminalNode
-
+import util
+from jack_node import *
+from tokenizer import Tokenizer
+from vm_writer import *
+from symbol_table import *
 
 class CompilationEngine:
     """ Responsible for parsing a list of jack tokens"""
@@ -12,11 +15,44 @@ class CompilationEngine:
     UNARY_OPERATORS = ["-", "~"]
     KEYWORD_CONSTANTS = ["true", "false", "null", "this"]
 
-    def __init__(self, tokens: List[Token]):
-        """ Creates and runs the parser over the given token list """
-        self.__tokens = tokens
+    def __init__(self, jack_file: str):
+        """ Creates and runs the parser over the given token list
+        """
+        tokenizer = Tokenizer(jack_file)
+        self.__jack_file = jack_file
+        self.__tokens = list(tokenizer.iter_tokens())
         self.__ix = 0
         self.__parsed_class = self.parse_class()
+        self.__symbol_table = SymbolTable()
+
+    def close(self):
+        """ Closes the VM writer"""
+        if self.__vm_writer:
+            self.__vm_writer.close()
+
+    def __enter__(self):
+        self.__vm_writer = VMWriter(self.__jack_file)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def reset_parser(self):
+        """ Resets parser to initial state(first token) """
+        self.__ix = 0
+
+    def emit_xml(self, semantic: bool):
+        """ Emits an .xml file for the root node(class)
+            :param semantic Whether to include ex11 debugging related semantic
+                            information to node
+        """
+        self.reset_parser()
+        clazz = self.parse_class()
+        util.write_xml_file(clazz.to_xml(semantic=semantic), self.__jack_file, "")
+
+    def emit_vm(self):
+        """ Emits .vm code for the class """
+        self.__vm_writer.write_return()
 
     def __has_more_tokens(self) -> bool:
         """ Returns true if there are more tokens to eat """
