@@ -6,7 +6,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CMP_DIR=$DIR/test_src
 
 # setup the temporary tests work directory, fill it with jack files
-WORK_DIR=$DIR/test_dir
+WORK_DIR=$DIR/test_tempdir
 rm -rf $WORK_DIR
 cp -r $CMP_DIR $WORK_DIR
 find $WORK_DIR/ -name "*.xml" -type f -delete
