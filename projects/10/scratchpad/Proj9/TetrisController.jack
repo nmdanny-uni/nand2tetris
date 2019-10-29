@@ -1,0 +1,230 @@
+/* This class is responsible for driving the game, by handling keyboard inputs
+   and drawing to screen according to the current state of the game.
+*/
+class TetrisController {
+
+  // used to draw squares on screen
+  field TetrisBoard board;
+
+  // either 0(a null pointer) if the game hasn't started, otherwise a valid Piece object.
+  field TetrisPiece currentPiece;
+
+  // current score
+  field int score;
+
+  // The number of 'ticks' that have passed since startnig the game, where
+  // the length of a tick is defined in the 'getTickDelayMs' method
+  //
+  // We can use this along with modulu to schedule certain events to happen every couple of ticks.
+  field int ticksPassed;
+
+  /* Starts a new game, responsible for initializing relevant fields
+  */
+  method void startGame() {
+    do Output.moveCursor(0, 0);
+    do Screen.clearScreen();
+
+    if (~(board = null)) {
+      do board.dispose();
+    }
+    let board = TetrisBoard.new();
+    let score = 0;
+    let ticksPassed = 0;
+    do board.draw();
+    do createNewPiece();
+    return;
+  }
+
+  constructor TetrisController new(){
+    return this;
+  }
+
+  method void dispose() {
+    if (~(board = null)) {
+      do board.dispose();
+    }
+    if (~(currentPiece = null)) {
+      do currentPiece.dispose();
+    }
+    do Memory.deAlloc(this);
+    return;
+  }
+
+  /** Processes player inputs. To be ran every tick during
+      the game, this returns whether the game should continue running,
+      returns false when restarting/quitting/losing, otherwise true.
+  */
+  method boolean processInput() {
+    var char keyPressed;
+    let keyPressed = Keyboard.keyPressed();
+    if (ticksPassed < getNumTicksForSeeding()) {
+      do Random.addToSeed(keyPressed);
+    }
+
+    if (keyPressed = 81) { // Q button
+      do GameScreens.showQuittingScreen(score);
+      return false;
+    }
+    if (keyPressed = 82) { // R button
+      do GameScreens.showRestartScreen(score);
+      return false;
+    }
+    if (keyPressed = 130) { // left-arrow
+      do currentPiece.move(board, -1, 0);
+    }
+    if (keyPressed = 132) { // right-arrow
+      do currentPiece.move(board, 1, 0);
+    }
+    if (keyPressed = 131) { // up-arrow
+      do currentPiece.rotate(board);
+    }
+    if (keyPressed = 133) { // down-arrow
+      return moveDown();
+    }
+    return true;
+  }
+
+  /** Tries creating a new tetris piece and draws it on the board
+      Returns false if there's no space for the new piece (loss condition)
+  */
+  method boolean createNewPiece() {
+    if (~(currentPiece = null)) {
+      do currentPiece.dispose();
+    }
+    let currentPiece = TetrisPiece.new(
+                                       Util.getNumberInRange(0, 7),
+                                       Util.getNumberInRange(0, 4),
+                                       3, 0);
+    if (~currentPiece.isNotColliding(board)) {
+      return false;
+    }
+    do currentPiece.draw(board, true);
+    return true;
+  }
+
+  /** Places the current piece on the map, and creates a new piece,
+      returning whether it succeeded in placing it. (false indicates a loss condition)
+  */
+  method boolean placePiece() {
+    // occupiedSquares is a 4x2 matrix, first col for 'x' coords and second for 'y'
+    var Array occupiedSquares;
+    var int xCord, yCord;
+    var int yMin; // this includes the topmost(minimal) y-coordinate of the shape
+    var int coordIx;
+    var int numLinesCleared;
+    let coordIx = 0;
+    let yMin = 9999;
+    let occupiedSquares = currentPiece.getOccupiedCoordinates();
+    while (coordIx < 4) {
+      let xCord = occupiedSquares[coordIx * 2];
+      let yCord = occupiedSquares[(coordIx * 2) + 1];
+      let yMin = Math.min(yMin, yCord);
+      do board.setMode(xCord, yCord, 2); // mode 2 = placed block
+      let coordIx = coordIx + 1;
+    }
+    let numLinesCleared = clearLines(yMin);
+    do updateScoreForDrop(numLinesCleared);
+    return createNewPiece();
+  }
+
+  /** Clears up to 4 lines of blocks, beginning from the given row,
+      and going down up. Returns the number of lines that were cleared.
+  */
+  method int clearLines(int startRow) {
+    var int numLinesCleared;
+    var int y;
+    let numLinesCleared = 0;
+    let y = startRow;
+    while ((y < TetrisBoard.getNumRows()) & (y < (startRow + 4))) {
+      if (board.isLineFull(y)) {
+        do board.clearLine(y);
+      }
+      let y = y + 1;
+    }
+    return numLinesCleared;
+  }
+
+  /** Tries moving the place down, placing it & respawning if blocked.
+      Returns true if we can keep playing or false if we lost (if the
+      new piece that spawned, is also blocked)
+  */
+  method boolean moveDown() {
+    var boolean wentDown, lost;
+    let wentDown = currentPiece.move(board, 0, 1);
+    if (~wentDown) {
+      let lost = ~placePiece();
+      if (lost) {
+        do GameScreens.showLoseScreen(score);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** The main entry point, responsible for running the game
+  */
+  method void gameLoop() {
+    var boolean continuePlaying;
+    var int tickDelay;
+    let tickDelay = getTickDelayMs();
+
+    // only ran once in the program's lifetime
+    do GameScreens.showStartScreen();
+
+    // the following loop executes every time we start a new game
+    while (true) {
+      do startGame();
+      let continuePlaying = true;
+
+      // the following loop occurs within a single game
+      while (continuePlaying) {
+        let continuePlaying = processInput();
+        do Sys.wait(tickDelay);
+        let ticksPassed = ticksPassed + 1;
+
+        // every 16 ticks (when ticksPassed % 16 == 0), try moving the piece down
+        if (continuePlaying & (Util.modulus_exp(ticksPassed, 4) = 0)) {
+          let continuePlaying = moveDown();
+        }
+      }
+    }
+    return;
+  }
+
+  /** Updates the score after dropping a piece, possibly awarding extra
+      points depending on how many lines were cleared */
+  method void updateScoreForDrop(int linesCleared) {
+    var int delta;
+    if (linesCleared = 0) {
+      let delta = 10;
+    }
+    if (linesCleared = 1) {
+      let delta = 100;
+    }
+    if (linesCleared = 2) {
+      let delta = 300;
+    }
+    if (linesCleared = 3) {
+      let delta = 500;
+    }
+    if (linesCleared = 4) {
+      let delta = 800;
+    }
+    let score = score + delta;
+    return;
+  }
+
+  /** Number of milliseconds between each game tick.
+      Changing this value will affect the falling-down speed
+  */
+  method int getTickDelayMs() {
+    return 70;
+  }
+
+  /** The number of ticks (since the start of a game) for which we'll use keyboard
+      inputs to update the seed
+  */
+  method int getNumTicksForSeeding() {
+    return 3000;
+  }
+}

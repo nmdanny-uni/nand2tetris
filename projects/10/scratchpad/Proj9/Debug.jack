@@ -1,0 +1,31 @@
+class Debug {
+  function void displayShape(int shapeEncoding) {
+    var int x, y, curBit;
+
+    do Output.printString("------");
+    do Output.println();
+
+    let curBit = 0;
+    let y = 0;
+    while (y < 4) {
+      let x = 0;
+      do Output.printChar(124); // prints a '|' as border
+      while (x < 4) {
+        if (Util.getBit(shapeEncoding, curBit)) {
+          do Output.printChar(-1); // prints a square block
+        } else {
+          do Output.printChar(32); // prints whitespace
+        }
+        let x = x + 1;
+        let curBit = curBit + 1;
+      }
+      do Output.printChar(124); // prints a '|' as border
+      do Output.println();
+      let y = y + 1;
+    }
+
+    do Output.printString("------");
+    do Output.println();
+    return;
+  }
+}

@@ -1,0 +1,234 @@
+/** Represents the current Tetris piece (tetromino) being controlled by the player.
+    Contains methods that allow moving and rotating it via the TetrisBoard, and also
+    contains methods to deal with collision checks.
+*/
+class TetrisPiece {
+  // A matrix of shapes, each row represents a different shape,
+  // and each column represents a different rotation of shape. Going right in the matrix gives you
+  // a clockwise rotation, and left gives you the counter-clockwise rotation (wrapping around the row
+  // if necessary)
+  static Array shapes;
+
+  // Each shape encoded via an int, a 16 bit number, which can be thought as a
+  // 4x4 grid of squares.
+  // For example, the shape that looks like so (a 2x2 square)
+  //  1100
+  //  1100
+  //  0000
+  //  0000
+  //
+  // represented in binary: 0000000000110011
+  // or, as int16(2s complement): 51
+  //
+  // Note how we build the binary number, starting with the LSB, from left to right top to bottom
+  // This also gives us the mapping between bit indices to coordinates, for example
+  // bit 0: (0, 0) (LSB)
+  // bit 1: (1, 0)
+  // bit 3: (3, 0)
+  // bit 4: (0, 1)
+  // and so on...
+  field int shapeEncoding;
+
+  // the first index to the 'shapes' matrix, shape number (0-7)
+  field int shapeNum;
+
+  // the second index to the 'shapes' matrix, the current rotation (0-3)
+  field int shapeRotation;
+
+  // coordinate of the topleft corner of the shape grid, within the TetrisBoard grid
+  field int tlX;
+  field int tlY;
+
+  /** Creates a new piece, using a shape number between 0 to 6, and rotation from 0 to 3,
+      and (x,y) coordinates as per TetrisBoard dimensions.
+  */
+  constructor TetrisPiece new(int setShapeNum, int setShapeRotation, int x, int y){
+    do populateShapes();
+    let shapeNum = setShapeNum;
+    let shapeRotation = setShapeRotation;
+    let shapeEncoding = shapes[(shapeNum * 4) + shapeRotation];
+    let tlX = x;
+    let tlY = y;
+    return this;
+  }
+
+  /** Returns the occupied coordinates as a 4*2 matrix, where the first column
+      contains 'x' and the second column contains 'y' component of the coordinate
+      (using row-major ordering)
+  */
+  method Array getOccupiedCoordinates() {
+    var Array array;
+    var int arrayIx, row, col;
+    let array = Array.new(8);
+
+    let arrayIx = 0;
+    let row = 0;
+    while (row < 4) {
+      let col = 0;
+      while (col < 4){
+        // using the mapping mentioned before, we add the coordinate
+        // to the output array if the corresponding bit is set
+        if (Util.getBit(shapeEncoding, (row * 4) + col)) {
+          let array[arrayIx] = tlX + col;
+          let array[arrayIx+1] = tlY + row;
+          let arrayIx = arrayIx + 2;
+        }
+        let col = col + 1;
+      }
+      let row = row + 1;
+    }
+
+    return array;
+  }
+
+
+  /** Draws the piece to the given board (if active), or un-draws it (if inactive)
+  */
+  method void draw(TetrisBoard board, boolean active) {
+    var Array occupied;
+    var int i;
+    var int mode;
+
+    let mode = 0;
+    if (active) {
+      let mode = 1;
+    }
+
+    let occupied = getOccupiedCoordinates(); // allocates a temporary array
+    let i = 0;
+    while (i < 4) {
+      do board.setMode(occupied[i*2], occupied[(i*2) + 1], mode);
+      let i = i + 1;
+    }
+    do occupied.dispose();
+    return;
+  }
+
+  /** Tries moving the piece by the given units, returning whether the move was
+      successfull or blocked.
+  */
+  method boolean move(TetrisBoard board, int deltaX, int deltaY) {
+    var int newTlX, newTlY;
+
+    let newTlX = tlX + deltaX;
+    let newTlY = tlY + deltaY;
+
+    if (~TetrisPiece.ensureNoCollision(board, shapeNum, shapeRotation,
+                                       newTlX, newTlY)) {
+      return false;
+    }
+
+    // Un-draw the piece at the old location
+    do draw(board, false);
+
+    // Change its coordinates
+    let tlX = newTlX;
+    let tlY = newTlY;
+
+    // Draw the piece at the new location
+    do draw(board, true);
+    return true;
+  }
+
+  /** Rotates the piece, returning whether the rotation succeeded */
+  method boolean rotate(TetrisBoard board) {
+    var int newRotation;
+
+    // calculate the new rotation
+    let newRotation = shapeRotation + 1;
+    // in case it went out of bounds
+    if (newRotation > 3) {
+      let newRotation = 0;
+    }
+
+    if (~TetrisPiece.ensureNoCollision(board, shapeNum, newRotation, tlX, tlY)) {
+      return false;
+    }
+
+    // undraw old shape
+    do draw(board, false);
+
+    // draw rotated piece
+    let shapeRotation = newRotation;
+    let shapeEncoding = shapes[(shapeNum * 4) + shapeRotation];
+    do draw(board, true);
+    return true;
+  }
+
+  /** Returns true if this shape isn't colliding with placed blocks in the board.
+      If this is false, the player lost. (This is called when a new piece spawns)
+  */
+  method boolean isNotColliding(TetrisBoard board) {
+    return TetrisPiece.ensureNoCollision(board, shapeNum, shapeRotation, tlX, tlY);
+  }
+
+  /** Returns true if the given shape(as specified by the given shape number and rotation)
+      doesn't collide with placed blocks in the board (or goes out of bounds)
+  */
+  function boolean ensureNoCollision(TetrisBoard board,
+                                     int curShapeNum, int newRotation,
+                                     int newTlX, int newTlY) {
+    var int newShapeEncoding, occupancyMask;
+    let newShapeEncoding = shapes[(curShapeNum * 4) + newRotation];
+    let occupancyMask = board.get4x4GridOccupancyMask(newTlX, newTlY);
+    // TODO: there's an OS bug regarding string disposal, printing all these strings is bad
+    /*
+    do Output.moveCursor(0, 0);
+    do Output.printString("shape");
+    do Output.println();
+    do Debug.displayShape(newShapeEncoding);
+    do Output.printString("occ");
+    do Output.println();
+    do Debug.displayShape(occupancyMask);
+    do Output.printString("and");
+    do Output.println();
+    do Debug.displayShape(occupancyMask & newShapeEncoding);
+    */
+    return ((occupancyMask & newShapeEncoding) = 0);
+  }
+
+  method void dispose(){
+    do Memory.deAlloc(this);
+    return;
+  }
+
+  /** Populates the shapes array. */
+  method void populateShapes() {
+    if (~(shapes = null)) {
+      return;
+    }
+    let shapes = Array.new(7 * 4);
+    // the following were generated by a short python program
+    // see TetrisPiece.jack for explanation on encoding of these shapes
+    let shapes[0] = 8738;
+    let shapes[1] = 240;
+    let shapes[2] = 17476;
+    let shapes[3] = 3840;
+    let shapes[4] = 802;
+    let shapes[5] = 113;
+    let shapes[6] = 1100;
+    let shapes[7] = 1136;
+    let shapes[8] = 1570;
+    let shapes[9] = 368;
+    let shapes[10] = 547;
+    let shapes[11] = 116;
+    let shapes[12] = 51;
+    let shapes[13] = 51;
+    let shapes[14] = 51;
+    let shapes[15] = 51;
+    let shapes[16] = 864;
+    let shapes[17] = 561;
+    let shapes[18] = 54;
+    let shapes[19] = 1122;
+    let shapes[20] = 624;
+    let shapes[21] = 562;
+    let shapes[22] = 114;
+    let shapes[23] = 610;
+    let shapes[24] = 1584;
+    let shapes[25] = 306;
+    let shapes[26] = 99;
+    let shapes[27] = 612;
+    return;
+  }
+
+}

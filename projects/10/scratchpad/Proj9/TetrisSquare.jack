@@ -1,0 +1,78 @@
+/** A single square of a tetris board, which is the smallest unit in the game.
+    Once constructed, the square itself doesn't move, but rather, moving can be
+    emulated by changing the mode of the square, which affects its appearance.
+
+    In essence, a TetrisSquare is very similar to a pixel, but scaled and belongs to a tetris grid.
+    A TetrisSquare has 3 possible modes:
+    mode = 0: inactive (white)
+    mode = 1: active, occupied by a TetrisPiece (player controlled)
+    mode = 2: active, a placed block that may be collided with
+*/
+class TetrisSquare {
+  // coordinates of top-left corner of square
+  field int x, y;
+
+  // see above for explanation of modes
+  field int mode;
+
+  /**
+     Creates an inactive square originating at the given top-left coordinates
+  */
+  constructor TetrisSquare new(int setX, int setY) {
+    let mode = 0;
+    let x = setX;
+    let y = setY;
+    return this;
+  }
+
+  method void dispose() {
+    do Memory.deAlloc(this);
+    return;
+  }
+
+  /** Draws the square into screen.
+  */
+  method void draw(){
+    var int height, padding;
+    let height = TetrisSquare.getHeight();
+    let padding = TetrisSquare.getPadding();
+
+    // draw the padding (for placed blocks, I'll ignore padding for now)
+    do Screen.setColor(mode = 0); // inverse color of below
+    do Screen.drawRectangle(x, y, x + height, y + height);
+
+    // draw the square (black if active, white if inactive)
+    do Screen.setColor(~(mode = 0));
+    do Screen.drawRectangle(x + padding, y + padding, x + height - padding, y + height - padding);
+    return;
+  }
+
+  /** Changes the mode of the square and re-draws it */
+  method void setMode(int newMode) {
+    let mode = newMode;
+    do draw();
+    return;
+  }
+
+  /** Returns the current mode of the square */
+  method int getMode() {
+    return mode;
+  }
+
+
+  // constant accessors:
+
+  /**
+     Returns the height/width of a square.
+  */
+  function int getHeight() {
+    return 10;
+  }
+
+  /**
+     Returns the padding of a square (included within its height)
+  */
+  function int getPadding() {
+    return 1;
+  }
+}

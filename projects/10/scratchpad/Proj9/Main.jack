@@ -1,0 +1,17 @@
+class Main {
+
+  function void main() {
+    var TetrisController controller;
+    do Random.init(1337); // seed
+    do Util.initPowersOf2();
+
+    if (~Tests.runAllTests()) {
+      do Sys.halt();
+    }
+
+    let controller = TetrisController.new();
+    do controller.gameLoop();
+    do controller.dispose();
+    return;
+  }
+}

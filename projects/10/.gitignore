@@ -1,2 +1,4 @@
 test_tempdir/
-scratchpad/
+scratchpad/**/*.xml
+scratchpad/**/*.json
+scratchpad/**/*.vm

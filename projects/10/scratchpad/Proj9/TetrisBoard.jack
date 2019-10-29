@@ -1,0 +1,247 @@
+/** This class manages a grid of squares in a Tetris game, and is responsible for drawing
+    their relevant pixels in the correct place in the screen in relation to the board's position.
+
+    Each square has a coordinate between (0,0) to (numRows, numCols) and may be on or off(black or white)
+
+    In essence, this is a 'Screen' wrapper, allowing the programmer to look at each each square
+    as a discrete unit rather than deal with raw pixels, and the math involved in calculating pixel
+    offsets and other effects such as square padding..
+*/
+class TetrisBoard {
+  field int score;
+
+  // a 2D matrix (using a 1D array via row major order) representing occupied/clear tetris
+  // squares. The square at (x, y) can be accessed via grid[x + (y * numCols)]
+  // The coordinate (0, 0) is the topleft-most square, and (numRows-1, numCols-1) is the
+  // bottomright-most square.
+  field Array grid;
+  field int numRows;
+  field int numCols;
+
+  // Coordinates of the topleft corner of the board.
+  field int tlX;
+  field int tlY;
+
+  constructor TetrisBoard new() {
+    var int x, y;
+    var int i;
+    let score = 0;
+
+    // Shift our board so that there'll be space for extra stuff & information
+    let tlX = 380;
+    let tlY = 12;
+
+    // Set game dimensions
+    let numRows = TetrisBoard.getNumRows();
+    let numCols = TetrisBoard.getNumColumns();
+    let grid = Array.new(numRows * numCols);
+
+    // initialize all squares
+    let x = 0;
+    while (x < numCols) {
+      let y = 0;
+      while (y < numRows) {
+        let grid[x + (y * numCols)] = TetrisSquare.new(tlX + (x * TetrisSquare.getHeight()),
+                                                       tlY + (y * TetrisSquare.getHeight()));
+        let y = y + 1;
+      }
+      let x = x + 1;
+    }
+    return this;
+  }
+
+  /** Sets the square at the (x,y) coordinate in the grid to the given mode.
+      See TetrisSquare documentation for explanation about modes.
+  */
+  method void setMode(int x, int y, int mode) {
+    var TetrisSquare square;
+    if (areCoordinatesNotInBounds(x, y)) {
+      do Output.println();
+      do Output.printString("TetrisBoard.setMode() accessed coordinates out of bounds");
+      do Output.println();
+      do Output.printString("x: ");
+      do Output.printInt(x);
+      do Output.printString(" y: ");
+      do Output.printInt(y);
+      do Output.println();
+      do Sys.error(1337);
+    }
+    if ((mode < 0) | (mode > 2)) {
+      do Output.println();
+      do Output.printString("TetrisBoard.setMode() got invalid mode");
+      do Sys.error(1337);
+    }
+    let square = grid[x + (y * numCols)];
+    do square.setMode(mode);
+    // don't always redraw the light border as it will flicker a lot
+    if (isTouchingBorder(x, y)) {
+      do drawLightBorder();
+    }
+    return;
+  }
+
+  /** Returns a 16-bit encoding of a 4x4 grid, whose topleft corner begins at the given coordinates
+      Any block that is occupied by a placed block(mode = 2) OR is out of bounds, will be represented by
+      a 1 bit. Otherwise by a 0 bit.
+      The encoding is similar to 'shapeEncoding' of 'TetrisPiece' - the topleft corner is the LSB,
+      and we go left to right, up to down, meaning the bottomright corner is MSB.
+  */
+  method int get4x4GridOccupancyMask(int tlX, int tlY) {
+    var int mask;
+    var int x, y, curBit;
+    var TetrisSquare square;
+    let mask = 0;
+
+    let curBit = 0;
+    let y = tlY;
+    while (y < (tlY + 4)) {
+      let x = tlX;
+      while (x < (tlX + 4)) {
+        if (areCoordinatesNotInBounds(x, y)) {
+          let mask = Util.setBit(mask, curBit);
+        }
+        else {
+          let square = grid[x + (y * numCols)];
+          if (square.getMode() = 2) {
+            let mask = Util.setBit(mask, curBit);
+          }
+        }
+        let curBit = curBit + 1;
+        let x = x + 1;
+      }
+      let y = y + 1;
+    }
+    return mask;
+  }
+
+  /** Draws the big border around the tetris board.
+      Should only be run once
+  */
+  method void drawThickBorder() {
+    var int squareHeight, borderWidth, borderDist;
+    let borderWidth = 6;
+    let borderDist = 2;
+    let squareHeight = TetrisSquare.getHeight();
+    do Screen.setColor(true);
+    do Screen.drawRectangle(tlX - borderWidth, tlY - borderWidth,
+                            tlX + (numCols * squareHeight) + borderWidth,
+                            tlY + (numRows * squareHeight) + borderWidth);
+
+    do Screen.setColor(false);
+    do Screen.drawRectangle(tlX - borderDist, tlY - borderDist,
+                            tlX + (numCols * squareHeight) + borderDist,
+                            tlY + (numRows * squareHeight) + borderDist);
+    return;
+
+  }
+
+  /** This creates the thin border around the board, which may get
+      ruined when an active square hugs one of the board's edges.
+  */
+  method void drawLightBorder() {
+    var int squareHeight;
+    let squareHeight = TetrisSquare.getHeight();
+    do Screen.setColor(true);
+    do Screen.drawLine(tlX, tlY, tlX + (squareHeight * numCols), tlY);
+    do Screen.drawLine(tlX, tlY, tlX, tlY + (squareHeight * numRows));
+    do Screen.drawLine(tlX + (squareHeight * numCols), tlY, tlX + (squareHeight * numCols), tlY + (squareHeight * numRows));
+    do Screen.drawLine(tlX, tlY + (squareHeight * numRows), tlX + (squareHeight * numCols), tlY + (squareHeight * numRows));
+    return;
+  }
+
+  /** Returns true if the square at the given coordinates is touching the board's
+      edges. */
+  method boolean isTouchingBorder(int x, int y) {
+    return (((x = 0) | (x = (numCols - 1))) | ((y = 0) | (y = (numRows - 1))));
+  }
+
+  /** Draws/updates all squares on screen.
+      Note, this is a heavy method, it should only be ran at the start of the game.
+      Use the more granular 'setMode' method to toggle specific squares that move.
+  */
+  method void draw() {
+    var int i;
+    var TetrisSquare curSquare;
+    do Screen.clearScreen();
+
+    // drawing game border
+    do drawThickBorder();
+    do drawLightBorder();
+
+    // draw all squares
+    let i = 0;
+    while (i < (numRows * numCols)) {
+      let curSquare = grid[i];
+      do curSquare.draw();
+      let i = i + 1;
+    }
+
+    return;
+  }
+
+  method void dispose() {
+    var int i;
+    var TetrisSquare curSquare;
+    let i = 0;
+
+    // clear the array's contents
+    while (i < (numRows * numCols)) {
+      let curSquare = grid[i];
+      do curSquare.dispose();
+      let i = i + 1;
+    }
+    do grid.dispose();
+    do Memory.deAlloc(this);
+    return;
+  }
+
+
+  /** Returns true IFF the given coordinates are outside the board's bounds. */
+  method boolean areCoordinatesNotInBounds(int x, int y) {
+    return ((x < 0) | (y < 0) | (x > (numCols - 1)) | (y > (numRows - 1)));
+  }
+
+  /** Returns true if the given row is occupied by placed blocks */
+  method boolean isLineFull(int y) {
+    var int x;
+    var TetrisSquare curSquare;
+    let x = 0;
+    while (x < numCols) {
+      let curSquare = grid[x + (y * numCols)];
+      if (~(curSquare.getMode() = 2)) {
+        return false;
+      }
+      let x = x + 1;
+    }
+    return true;
+  }
+
+  /** Clears the row at index 'y', shifting all squares above it one unit down. */
+  method void clearLine(int y) {
+    var int x;
+    var TetrisSquare curSquare, squareAbove;
+    while (y > 1) {
+      let x = 0;
+      while (x < numCols) {
+        let curSquare = grid[x + (y * numCols)];
+        let squareAbove = grid[x + ((y-1) * numCols)];
+        do curSquare.setMode(squareAbove.getMode());
+
+        let x = x + 1;
+      }
+      let y = y - 1;
+    }
+    do drawLightBorder();
+    return;
+  }
+
+  /** Returns the number of rows in our game */
+  function int getNumRows() {
+    return 20;
+  }
+
+  /** Returns the number of columns in our game */
+  function int getNumColumns() {
+    return 10;
+  }
+}

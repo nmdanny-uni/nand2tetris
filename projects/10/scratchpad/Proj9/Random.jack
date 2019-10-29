@@ -1,0 +1,36 @@
+/** Implementation of pseudorandom number generator
+    a xorshift, based on http://www.retroprogramming.com/2017/07/xorshift-pseudorandom-numbers-in-z80.html
+    Uses singleton for global access
+*/
+class Random {
+  static int seed;
+
+  // RNG parameters
+  static int a;
+  static int b;
+  static int c;
+
+  /** Initializes the PRNG with given seed */
+  function void init(int setSeed) {
+    let seed = setSeed;
+    let a = 7;
+    let b = 9;
+    let c = 8;
+    return;
+  }
+
+
+  /** Obtains a random signed int */
+  function int getNumber(){
+    let seed = Util.xor(seed, Util.leftShift(seed, a));
+    let seed = Util.xor(seed, Util.rightShift(seed, b));
+    let seed = Util.xor(seed, Util.leftShift(seed, c));
+    return seed;
+  }
+
+  /** Adds the given number to the seed */
+  function void addToSeed(int delta) {
+    let seed = seed + delta;
+    return;
+  }
+}
