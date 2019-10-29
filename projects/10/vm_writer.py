@@ -3,6 +3,7 @@ from typing import List, Optional
 from enum import Enum
 from dataclasses import dataclass
 import logging
+from typing import Iterable
 from pathlib import Path
 
 
@@ -78,7 +79,9 @@ ST_TO_UNARY_OPERATOR = {
 }
 
 class VMWriter:
-    """ Emits VM instructions to a vm file """
+    """ Emits VM instructions to a vm file
+        This class has a fluent style (you can chain write_ methods)
+     """
     def __init__(self, jack_file: str):
         """ Creates a VM writer for a corresponding jack file path """
         jack_path = Path(jack_file)
@@ -103,15 +106,32 @@ class VMWriter:
         self.__file.write(st+"\n")
         #logging.debug(st)
 
-    def write_push(self, segment: Segment, num: int):
+    def write_comment(self, comment: str) -> VMWriter:
+        """ Writes a 1-line comment """
+        self.__write_line(f"// {comment}")
+        return self
+
+    def write_multiline_comment(self, comments: Iterable[str]) -> VMWriter:
+        """ writes a multiline comment """
+        self.__write_line("/*")
+        for comment in comments:
+            self.__write_line(f" * {comment}")
+        self.__write_line("*/")
+        return self
+
+    def write_push(self, segment: Segment, num: int) -> VMWriter:
         """ Writes a VM push command """
+        assert num >= 0
         self.__write_line(f"push {segment.name.lower()} {num}")
+        return self
 
-    def write_pop(self, segment: Segment, num: int):
+    def write_pop(self, segment: Segment, num: int) -> VMWriter:
         """ Writes a VM pop command """
+        assert num >= 0
         self.__write_line(f"pop {segment.name.lower()} {num}")
+        return self
 
-    def write_arithmetic(self, operator: str):
+    def write_arithmetic(self, operator: str) -> VMWriter:
         """ Writes a VM arithmetic command"""
         operator = Operator.from_symbol(operator)
         if operator in OPERATOR_TO_OS_CALL:
@@ -119,24 +139,32 @@ class VMWriter:
             self.write_call(os_call, 2)
         else:
             self.__write_line(f"{operator.name.lower()}")
+        return self
 
-    def write_label(self, label: str):
+    def write_label(self, label: str) -> VMWriter:
         """ Writes a label """
         self.__write_line(f"label {str}")
+        return self
 
-    def write_if_goto(self, label: str):
+    def write_if_goto(self, label: str) -> VMWriter:
         """ Writes an if-goto statement"""
         self.__write_line(f"if-goto {str}")
+        return self
 
-    def write_call(self, func: str, num_args: int):
+    def write_call(self, func: str, num_args: int) -> VMWriter:
         """ Writes a call instruction"""
+        assert num_args >= 0
         self.__write_line(f"call {func} {num_args}")
+        return self
 
-    def write_function(self, func_name: str, num_args: int):
+    def write_function(self, func_name: str, num_args: int) -> VMWriter:
         """ Writes a function declaration"""
+        assert num_args >= 0
         self.__write_line(f"function {func_name} {num_args}")
+        return self
 
-    def write_return(self):
+    def write_return(self) -> VMWriter:
         """ Writes a return instruction """
         self.__write_line("return")
+        return self
 
