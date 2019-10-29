@@ -28,54 +28,13 @@ from symbol_table import Kind
 from vm_writer import Operator
 from enum import Enum
 
-@dataclass
-class Node(ABC):
-    """ A node in the parse tree """
-    @abstractmethod
-    def to_xml(self, semantic: bool = False) -> ET.Element:
-        """ Converts the node to an XML node, optionally including
-            ex11 semantic information """
-        raise NotImplementedError("to_xml() not implemented")
-
-
-
-def attach_semantic_info_to_node(node: ET.Element, semantic: Semantic):
-    """ A debugging method used to attach semantic information to an XML
-        node as attributes or """
-    for key, value in asdict(semantic).items():
-        node.set(key, str(value))
 
 @dataclass
-class Token(Node):
+class Token:
     """ A token - a terminal nodes in the parse tree.  """
     type: str
     contents: Union[str, int]  # int for an integerConstant, string otherwise
     file_pos: int  # used for error reporting, token's position(index) in file
-    semantic: Optional[Semantic] = None
-
-    def to_xml(self, semantic: bool = False) -> ET.Element:
-        tag = ET.Element(self.type)
-        tag.text = str(self.contents)
-        if semantic and self.semantic is not None:
-            attach_semantic_info_to_node(tag, self.semantic)
-        return tag
-
-
-@dataclass
-class NonTerminalNode(Node):
-    """ A "non terminal node, which may include several sub-nodes """
-    type: str
-    contents: List[Node]
-    semantic: Optional[Semantic] = None
-
-    def to_xml(self, semantic: bool = False) -> ET.Element:
-        root = ET.Element(self.type)
-        if semantic and self.semantic is not None:
-            attach_semantic_info_to_node(root, self.semantic)
-        for node in self.contents:
-            root.append(node.to_xml(semantic))
-        return root
-
 
 class Semantic(ABC):
     """ A semantic object is used to enrich a node in the parse tree with

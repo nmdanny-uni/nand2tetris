@@ -108,188 +108,161 @@ class CompilationEngine:
 
 
     @with_xml_tag("class")
-    def parse_class(self) -> NonTerminalNode:
-        identifier = self.eat("keyword", "class")
+    def parse_class(self) -> Class:
+        self.eat("keyword", "class")
         class_name = self.eat("identifier")
-        opener = self.eat("symbol", "{")
-        var_decs = []
-        semantic = Class(
-            class_name=identifier.contents,
+        self.eat("symbol", "{")
+        clazz = Class(
+            class_name=class_name.contents,
             class_file_path=str(self.__jack_file),
             variable_declarations=[],
             subroutines=[]
         )
         while self.matches("keyword", "field", "static"):
-            xml, sem = self.parse_class_variable_declaration()
-            var_decs.append(xml)
-            semantic.variable_declarations.extend(sem)
-        subroutines = []
+            var_dec = self.parse_class_variable_declaration()
+            clazz.variable_declarations.extend(var_dec)
         while self.matches("keyword", "constructor", "function", "method"):
-            xml, sem = self.parse_subroutine()
-            subroutines.append(xml)
-            semantic.subroutines.append(sem)
-        closer = self.eat("symbol", "}")
-        return NonTerminalNode(type="class", contents=[
-            identifier, class_name, opener, *var_decs, *subroutines, closer
-        ], semantic=semantic)
+            subroutine = self.parse_subroutine()
+            clazz.subroutines.append(subroutine)
+        self.eat("symbol", "}")
+        return clazz
 
     @with_xml_tag("classVarDec")
-    def parse_class_variable_declaration(self) -> Tuple[NonTerminalNode,
-                                                        List[ClassVariableDeclaration]]:
+    def parse_class_variable_declaration(self) -> List[ClassVariableDeclaration]:
         var_decl_type = self.eat("keyword", "field", "static")
         var_type = self.eat_type()
         var_name = self.eat("identifier")
-        extra_tokens = []
-        semantic = ClassVariableDeclaration(
+        clazz = ClassVariableDeclaration(
             name=var_name.contents,
             type=var_type.contents,
             kind=Kind.from_str(var_decl_type.contents)
         )
-        semantics = [semantic]
+        classes = [clazz]
         while self.matches("symbol", ","):
-            comma = self.eat("symbol", ",")
+            self.eat("symbol", ",")
             next_var_name = self.eat("identifier")
-            extra_tokens.extend([comma, next_var_name])
-            semantics.append(ClassVariableDeclaration(
+            classes.append(ClassVariableDeclaration(
                 name=next_var_name.contents,
-                type=semantic.type,
-                kind=semantic.kind
+                type=clazz.type,
+                kind=clazz.kind
             ))
-        semicolon = self.eat("symbol", ";")
-        return NonTerminalNode(type="classVarDec", contents=[
-            var_decl_type, var_type, var_name, *extra_tokens, semicolon
-        ]), semantics
+        self.eat("symbol", ";")
+        return classes
 
     @with_xml_tag("subroutineDec")
-    def parse_subroutine(self) -> Tuple[NonTerminalNode, Subroutine]:
+    def parse_subroutine(self) -> Subroutine:
         subroutine_type = self.eat("keyword", "constructor", "function", "method")
         return_type = self.eat_type(include_void=True)
         var_name = self.eat("identifier")
-        args_opener = self.eat("symbol", "(")
-        param_list, arguments = self.parse_parameter_list()
-        args_closer = self.eat("symbol", ")")
-        body, body_sem = self.parse_subroutine_body()
-        semantic = Subroutine(
+        self.eat("symbol", "(")
+        arguments = self.parse_parameter_list()
+        self.eat("symbol", ")")
+        body = self.parse_subroutine_body()
+        subroutine = Subroutine(
             subroutine_type=SubroutineType.from_str(subroutine_type.contents),
             name=var_name.contents,
             arguments=arguments,
             return_type=(None if return_type.contents == "void"
                          else return_type.contents),
-            body=body_sem
+            body=body
         )
-        return NonTerminalNode(type="subroutineDec", contents=[
-            subroutine_type, return_type, var_name, args_opener, param_list, args_closer,
-            body
-        ]), semantic
+        return subroutine
 
     @with_xml_tag("parameterList")
-    def parse_parameter_list(self) -> Tuple[NonTerminalNode,
-                                            List[SubroutineArgument]]:
+    def parse_parameter_list(self) -> List[SubroutineArgument]:
         if self.matches("symbol", ")"):
-            return NonTerminalNode(type="parameterList", contents=[]), []
-        tokens = []
-        semantics = []
+            return []
+
+        params = []
         first_type = self.eat_type()
         first_var = self.eat("identifier")
-        semantics.append(SubroutineArgument(
+        params.append(SubroutineArgument(
             name=first_var.contents,
             type=first_type.contents
         ))
-        tokens.extend([first_type, first_var])
         while self.matches("symbol", ","):
-            comma = self.eat("symbol", ",")
+            self.eat("symbol", ",")
             next_type = self.eat_type()
             next_var = self.eat("identifier")
-            tokens.extend([comma, next_type, next_var])
-            semantics.append(SubroutineArgument(
+            params.append(SubroutineArgument(
                 name=next_var.contents,
                 type=next_type.contents
             ))
 
-        return NonTerminalNode(type="parameterList", contents=tokens), semantics
+        return params
 
     @with_xml_tag("subroutineBody")
-    def parse_subroutine_body(self) -> Tuple[NonTerminalNode, SubroutineBody]:
-        semantic = SubroutineBody(
+    def parse_subroutine_body(self) -> SubroutineBody:
+        body = SubroutineBody(
             variable_declarations=[],
             statements=[]
         )
-        body_opener = self.eat("symbol", "{")
-        var_decs = []
+        self.eat("symbol", "{")
         while self.matches("keyword", "var"):
-            xml, sem = self.parse_var_dec()
-            var_decs.append(xml)
-            semantic.variable_declarations.extend(sem)
-        statements, statements_sem = self.parse_statements()
-        semantic.statements.extend(statements_sem)
-        body_closer = self.eat("symbol", "}")
-        return NonTerminalNode(type="subroutineBody", contents=[body_opener, *var_decs, statements, body_closer]), semantic
+            dec = self.parse_var_dec()
+            body.variable_declarations.extend(dec)
+        statements = self.parse_statements()
+        body.statements.extend(statements)
+        self.eat("symbol", "}")
+        return body
 
     @with_xml_tag("varDec")
-    def parse_var_dec(self) -> Tuple[NonTerminalNode, List[SubroutineVariableDeclaration]]:
-        dec = self.eat("keyword", "var")
+    def parse_var_dec(self) -> List[SubroutineVariableDeclaration]:
+        self.eat("keyword", "var")
         var_type = self.eat_type()
         var_name = self.eat("identifier")
-        extra_vars = []
-        semantic = SubroutineVariableDeclaration(
+        declaration = SubroutineVariableDeclaration(
             name=var_name.contents,
             type=var_type.contents,
             kind=Kind.Var
         )
-        semantics = [semantic]
+        declarations = [declaration]
         while self.matches("symbol", ","):
-            comma = self.eat("symbol", ",")
+            self.eat("symbol", ",")
             extra_var_name = self.eat("identifier")
-            extra_vars.extend([comma, extra_var_name])
-            semantics.append(SubroutineVariableDeclaration(
+            declarations.append(SubroutineVariableDeclaration(
                 name=extra_var_name.contents,
-                type=semantic.type,
-                kind=semantic.kind
+                type=declaration.type,
+                kind=declaration.kind
             ))
-        semicolon = self.eat("symbol", ";")
-        return NonTerminalNode(type="varDec", contents=[dec, var_type, var_name, *extra_vars, semicolon]), semantics
+        self.eat("symbol", ";")
+        return declarations
 
     @with_xml_tag("statements")
-    def parse_statements(self) -> Tuple[NonTerminalNode, List[Statement]]:
+    def parse_statements(self) -> List[Statement]:
         statements = []
-        statements_sem = []
         while True:
             match = self.matches("keyword", "let", "if", "while", "do", "return")
             if not match:
                 break
             if match.contents == "let":
-                statement, statement_sem = self.parse_let()
+                statement = self.parse_let()
                 statements.append(statement)
-                statements_sem.append(statement_sem)
             elif match.contents == "if":
-                statement, statement_sem = self.parse_if()
+                statement = self.parse_if()
                 statements.append(statement)
-                statements_sem.append(statement_sem)
             elif match.contents == "while":
-                statement, statement_sem = self.parse_while()
+                statement = self.parse_while()
                 statements.append(statement)
-                statements_sem.append(statement_sem)
             elif match.contents == "do":
-                statement, statement_sem = self.parse_do()
+                statement = self.parse_do()
                 statements.append(statement)
             elif match.contents == "return":
-                statement, statement_sem = self.parse_return()
+                statement = self.parse_return()
                 statements.append(statement)
-                statements_sem.append(statement_sem)
             else:
                 raise ValueError("Impossible(matches function is wrong)")
 
-        return NonTerminalNode(type="statements", contents=statements), statements_sem
+        return statements
 
     @with_xml_tag("doStatement")
-    def parse_do(self) -> Tuple[NonTerminalNode, DoStatement]:
-        do = self.eat("keyword", "do")
-        subroutine_call_tokens, call_sem = self.parse_subroutine_call()
-        semicolon = self.eat("symbol", ";")
-        sem = DoStatement(call=call_sem)
-        return NonTerminalNode(type="doStatement", contents=[do, *subroutine_call_tokens, semicolon]), sem
+    def parse_do(self) -> DoStatement:
+        self.eat("keyword", "do")
+        call = self.parse_subroutine_call()
+        self.eat("symbol", ";")
+        return DoStatement(call=call)
 
-    def parse_subroutine_call(self, identifier=None) -> Tuple[List[Node], SubroutineCall]:
+    def parse_subroutine_call(self, identifier=None) -> SubroutineCall:
         """ Parses a subroutine call, optionally using a pre-existing identifier
             token if it was eaten already.
 
@@ -302,176 +275,153 @@ class CompilationEngine:
         if self.matches("symbol", "("):
             # we are perform a subroutine call, (where 'identifier' is a
             # local method)
-            args_opener = self.eat("symbol", "(")
-            args, args_sem = self.parse_expression_list()
-            args_closer = self.eat("symbol", ")")
-            return [identifier, args_opener, args, args_closer], SubroutineCall(call_type=SubroutineType.Method, # TODO determine this?
-                                                                                subroutine_name=identifier.contents,
-                                                                                arguments=args_sem)
+            self.eat("symbol", "(")
+            args = self.parse_expression_list()
+            self.eat("symbol", ")")
+            return SubroutineCall(call_type=SubroutineType.Method, # TODO determine this?
+                                  subroutine_name=identifier.contents,
+                                  arguments=args)
 
         elif self.matches("symbol", "."):
             # we are performing a subroutine call, where 'identifier' is a class
             # variable in case of a method call, or class identifier in case of
             # a static method/constructor call
-            dot = self.eat("symbol", ".")
+            self.eat("symbol", ".")
             subroutine_name = self.eat("identifier")
-            args_opener = self.eat("symbol", "(")
-            args , args_sem = self.parse_expression_list()
-            args_closer = self.eat("symbol", ")")
-            subrot_name = f"{identifier.contents}.{subroutine_name.contents}"
-            return [identifier, dot, subroutine_name, args_opener, args, args_closer], SubroutineCall(call_type=SubroutineType.Method,
-                                                                                                      subroutine_name=subrot_name,
-                                                                                                      arguments=args_sem)
+            self.eat("symbol", "(")
+            args = self.parse_expression_list()
+            self.eat("symbol", ")")
+            full_name = f"{identifier.contents}.{subroutine_name.contents}"
+            return SubroutineCall(call_type=SubroutineType.Method,
+                                  subroutine_name=full_name,
+                                  arguments=args)
         else:
             raise ValueError("Failed to parse subroutine call")
 
     @with_xml_tag("letStatement")
-    def parse_let(self) -> Tuple[NonTerminalNode, LetStatement]:
-        tokens = []
-        let = self.eat("keyword", "let")
+    def parse_let(self) -> LetStatement:
+        self.eat("keyword", "let")
         var_name = self.eat("identifier")
-        tokens.extend([let, var_name])
         var_index_expr = None
         if self.matches("symbol", "["):
-            index_opener = self.eat("symbol", "[")
-            index_expression, var_index_expr = self.parse_expression()
-            index_closer = self.eat("symbol", "]")
-            tokens.extend([index_opener, index_expression, index_closer])
-        equals = self.eat("symbol", "=")
-        expression, expr_sem = self.parse_expression()
-        semicolon = self.eat("symbol", ";")
-        tokens.extend([equals, expression, semicolon])
-        sem = LetStatement(var_name=var_name.contents,
-                           var_index_expr=var_index_expr,
-                           assignment=expr_sem)
-        return NonTerminalNode(type="letStatement", contents=tokens), sem
+            self.eat("symbol", "[")
+            var_index_expr = self.parse_expression()
+            self.eat("symbol", "]")
+        self.eat("symbol", "=")
+        assignment_expr = self.parse_expression()
+        self.eat("symbol", ";")
+        return LetStatement(var_name=var_name.contents,
+                            var_index_expr=var_index_expr,
+                            assignment=assignment_expr)
 
     @with_xml_tag("whileStatement")
-    def parse_while(self) -> Tuple[NonTerminalNode, WhileStatement]:
-        while_tok = self.eat("keyword", "while")
-        cond_opener = self.eat("symbol", "(")
-        cond_expr, cond_sem = self.parse_expression()
-        cond_closer = self.eat("symbol", ")")
+    def parse_while(self) -> WhileStatement:
+        self.eat("keyword", "while")
+        self.eat("symbol", "(")
+        condition_expr = self.parse_expression()
+        self.eat("symbol", ")")
 
-        block_opener = self.eat("symbol", "{")
-        statements, statements_sem = self.parse_statements()
-        block_closer = self.eat("symbol", "}")
-        sem = WhileStatement(condition=cond_sem, body=statements_sem)
-        return NonTerminalNode(type="whileStatement", contents=[
-            while_tok, cond_opener, cond_expr, cond_closer,
-            block_opener, statements, block_closer]), sem
+        self.eat("symbol", "{")
+        statements_body = self.parse_statements()
+        self.eat("symbol", "}")
+        return WhileStatement(condition=condition_expr, body=statements_body)
 
     @with_xml_tag("returnStatement")
-    def parse_return(self) -> Tuple[NonTerminalNode, ReturnStatement]:
-        return_tok = self.eat("keyword", "return")
+    def parse_return(self) -> ReturnStatement:
+        self.eat("keyword", "return")
         if self.matches("symbol", ";"):
-            semicolon = self.eat("symbol", ";")
-            return NonTerminalNode(type="returnStatement",
-                                   contents=[return_tok, semicolon]), ReturnStatement(return_expr=None)
+            self.eat("symbol", ";")
+            return ReturnStatement(return_expr=None)
         else:
-            expr, expr_sem = self.parse_expression()
-            semicolon = self.eat("symbol", ";")
-            return NonTerminalNode(type="returnStatement",
-                                   contents=[return_tok, expr, semicolon]), ReturnStatement(return_expr=expr_sem)
+            return_expr = self.parse_expression()
+            self.eat("symbol", ";")
+            return ReturnStatement(return_expr=return_expr)
 
     @with_xml_tag("ifStatement")
-    def parse_if(self) -> Tuple[NonTerminalNode, IfStatement]:
-        if_tok = self.eat("keyword", "if")
-        cond_opener = self.eat("symbol", "(")
-        cond, cond_sem = self.parse_expression()
-        cond_closer = self.eat("symbol", ")")
-        block_opener = self.eat("symbol", "{")
-        statements, body_sem = self.parse_statements()
-        block_closer = self.eat("symbol", "}")
-        tokens = [if_tok, cond_opener, cond, cond_closer, block_opener,
-                  statements, block_closer]
+    def parse_if(self) -> IfStatement:
+        self.eat("keyword", "if")
+        self.eat("symbol", "(")
+        condition = self.parse_expression()
+        self.eat("symbol", ")")
+        self.eat("symbol", "{")
+        statements = self.parse_statements()
+        self.eat("symbol", "}")
 
-        else_sem = None
+        else_statements = None
         if self.matches("keyword", "else"):
-            else_tok = self.eat("keyword", "else")
-            else_opener = self.eat("symbol", "{")
-            else_statements, else_sem = self.parse_statements()
-            else_closer = self.eat("symbol", "}")
-            tokens.extend([else_tok, else_opener, else_statements, else_closer])
-        sem = IfStatement(condition = cond_sem, if_body=body_sem, else_body=else_sem)
-        return NonTerminalNode(type="ifStatement", contents=tokens), sem
+            self.eat("keyword", "else")
+            self.eat("symbol", "{")
+            else_statements = self.parse_statements()
+            self.eat("symbol", "}")
+        return IfStatement(condition = condition, if_body=statements,
+                           else_body=else_statements)
 
     @with_xml_tag("expression")
-    def parse_expression(self) -> Tuple[NonTerminalNode, Expression]:
-        term, term_sem = self.parse_term()
-        expr = Expression(term=term_sem, other=[])
-        tokens = [term]
+    def parse_expression(self) -> Expression:
+        term = self.parse_term()
+        expr = Expression(term=term, other=[])
         while self.matches("symbol", *CompilationEngine.OPERATORS):
             operator = self.eat("symbol", *CompilationEngine.OPERATORS)
-            operator_sem = Operator.from_symbol(operator.contents)
-            tokens.append(operator)
-            term, term_sem = self.parse_term()
-            tokens.append(term)
-            expr.other.append((operator_sem, term_sem))
-        return NonTerminalNode(type="expression", contents=tokens), expr
+            operator_typed = Operator.from_symbol(operator.contents)
+            term = self.parse_term()
+            expr.other.append((operator_typed, term))
+        return expr
 
     @with_xml_tag("term")
-    def parse_term(self) -> Tuple[NonTerminalNode, Term]:
+    def parse_term(self) -> Term:
         # trivial cases where we have an integer/string/keyword constant
         token = self.eat_optional("integerConstant")
         if token:
-            return NonTerminalNode(type="term", contents=[token]), IntegerConstant(int(token.contents))
+            return IntegerConstant(int(token.contents))
 
         token = self.eat_optional("stringConstant")
         if token:
-            return NonTerminalNode(type="term", contents=[token]), StringConstant(token.contents)
+            return StringConstant(token.contents)
 
         token = self.eat_optional("keyword", *CompilationEngine.KEYWORD_CONSTANTS)
         if token:
-            return NonTerminalNode(type="term", contents=[token]), KeywordConstant(token.contents)
+            return KeywordConstant(token.contents)
 
         if self.matches("symbol", "("):
             # we have a sub-expression
-            expr_opener = self.eat("symbol", "(")
-            expr, expr_sem = self.parse_expression()
-            expr_closer = self.eat("symbol", ")")
-            return NonTerminalNode(type="term", contents=[expr_opener, expr, expr_closer]), Parentheses(expr=expr_sem)
+            self.eat("symbol", "(")
+            expr = self.parse_expression()
+            self.eat("symbol", ")")
+            return Parentheses(expr=expr)
 
         if self.matches("symbol", *CompilationEngine.UNARY_OPERATORS):
             # we have a unary operation
             unary_op = self.eat("symbol", *CompilationEngine.UNARY_OPERATORS)
-            term, term_sem = self.parse_term()
-            return NonTerminalNode(type="term", contents=[unary_op, term]), UnaryOp(operator=Operator.from_symbol(unary_op.contents),
-                                                                                    term=term_sem)
+            term = self.parse_term()
+            return UnaryOp(operator=Operator.from_symbol(unary_op.contents),
+                           term=term)
 
         # we have 3 different possibilities involving an identifier
         identifier = self.eat("identifier")
         if self.matches("symbol", "["):
             # we are array-indexing (where 'identifier' is an array)
-            index_opener = self.eat("symbol", "[")
-            index_expr, index_expr_sem = self.parse_expression()
-            index_closer = self.eat("symbol", "]")
-            return NonTerminalNode(type="term", contents=[
-                identifier, index_opener, index_expr, index_closer
-            ]), ArrayIndexer(array_var=identifier.contents,
-                             index_expr=index_expr_sem
-                            )
-            pass
+            self.eat("symbol", "[")
+            indexer_expr = self.parse_expression()
+            self.eat("symbol", "]")
+            return ArrayIndexer(array_var=identifier.contents,
+                                index_expr=indexer_expr)
         elif self.matches("symbol", "(", "."):
             # we are performing a subroutine call
-            tokens, call_sem = self.parse_subroutine_call(identifier=identifier)
-            return NonTerminalNode(type="term", contents=tokens), call_sem
+            return self.parse_subroutine_call(identifier=identifier)
         else:
             # we have a plain variable reference
-            return NonTerminalNode(type="term", contents=[identifier]), VariableReference(var_name=identifier.contents)
+            return VariableReference(var_name=identifier.contents)
 
     @with_xml_tag("expressionList")
-    def parse_expression_list(self) -> Tuple[NonTerminalNode, List[Expression]]:
+    def parse_expression_list(self) -> List[Expression]:
         if self.matches("symbol", ")"):
-            return NonTerminalNode(type="expressionList", contents=[]), []
+            return []
 
-        expr, expr_sem = self.parse_expression()
-        tokens = [expr]
-        exprs_sem = [expr_sem]
+        expression = self.parse_expression()
+        expressions = [expression]
         while self.matches("symbol", ","):
-            tokens.append(self.eat("symbol", ","))
-            expr, expr_sem = self.parse_expression()
-            tokens.append(expr)
-            exprs_sem.append(expr_sem)
-        return NonTerminalNode(type="expressionList", contents=tokens), exprs_sem
+            self.eat("symbol", ",")
+            expression = self.parse_expression()
+            expressions.append(expression)
+        return expressions
 
