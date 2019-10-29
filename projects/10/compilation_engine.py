@@ -360,7 +360,8 @@ class CompilationEngine:
         expr = Expression(term=term, other=[])
         while self.matches("symbol", *CompilationEngine.OPERATORS):
             operator = self.eat("symbol", *CompilationEngine.OPERATORS)
-            operator_typed = Operator.from_symbol(operator.contents)
+            operator_typed = Operator.from_symbol(operator.contents,
+                                                  unary=False)
             term = self.parse_term()
             expr.other.append((operator_typed, term))
         return expr
@@ -391,7 +392,8 @@ class CompilationEngine:
             # we have a unary operation
             unary_op = self.eat("symbol", *CompilationEngine.UNARY_OPERATORS)
             term = self.parse_term()
-            return UnaryOp(operator=Operator.from_symbol(unary_op.contents),
+            return UnaryOp(operator=Operator.from_symbol(unary_op.contents,
+                                                         unary=True),
                            term=term)
 
         # we have 3 different possibilities involving an identifier

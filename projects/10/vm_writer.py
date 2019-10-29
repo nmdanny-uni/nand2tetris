@@ -31,19 +31,36 @@ class Operator(str, Enum):
     Mul = "mul",
     Div = "div"
 
+    def num_args(self) -> int:
+        """ Returns the number of arguments used by this operator """
+        if self in [Operator.Neg, Operator.Not]:
+            return 1
+        return 2
+
 
     @staticmethod
-    def from_symbol(symbol: str) -> Operator:
-        if symbol in ST_TO_OPERATOR:
-            return ST_TO_OPERATOR[symbol]
-        raise ValueError(f"\"{symbol}\" is not a valid symbol")
+    def from_symbol(symbol: str, unary: bool = False) -> Operator:
+        """ Converts a string symbol into an operator
+            A 'unary' flag may be passed to signify that this is a unary
+            operator (to differ between 'neg' and 'sub')
+        """
+        op = None
+        if unary:
+            op = ST_TO_UNARY_OPERATOR.get(symbol, None)
+        else:
+            op = ST_TO_BINARY_OPERATOR.get(symbol, None)
+
+        if not op:
+            raise ValueError(f"\"{symbol}\" is not a valid operator")
+        return op
+
 
 OPERATOR_TO_OS_CALL = {
     Operator.Mul: "Math.multiply",
     Operator.Div: "Math.divide"
 }
 
-ST_TO_OPERATOR = {
+ST_TO_BINARY_OPERATOR = {
     "+": Operator.Add,
     "-": Operator.Sub,
     "=": Operator.Eq,
@@ -51,11 +68,14 @@ ST_TO_OPERATOR = {
     "<": Operator.Lt,
     "&": Operator.And,
     "|": Operator.Or,
-    "~": Operator.Not,
     "*": Operator.Mul,
     "/": Operator.Div
 }
 
+ST_TO_UNARY_OPERATOR = {
+    "-": Operator.Neg,
+    "~": Operator.Not
+}
 
 class VMWriter:
     """ Emits VM instructions to a vm file """
