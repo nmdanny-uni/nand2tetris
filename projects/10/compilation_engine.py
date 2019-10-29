@@ -181,6 +181,7 @@ class CompilationEngine:
         body, body_sem = self.parse_subroutine_body()
         semantic = Subroutine(
             subroutine_type=SubroutineType.from_str(subroutine_type.contents),
+            name=var_name.contents,
             arguments=arguments,
             return_type=(None if return_type.contents == "void"
                          else return_type.contents),

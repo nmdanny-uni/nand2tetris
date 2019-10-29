@@ -118,6 +118,7 @@ class SubroutineType(str, Enum):
 @dataclass
 class Subroutine:
     subroutine_type: SubroutineType
+    name: str
     arguments: List[SubroutineArgument]
     return_type: Optional[str]
     body: SubroutineBody
