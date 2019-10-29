@@ -3,7 +3,7 @@ from typing import List, Optional
 from enum import Enum
 from dataclasses import dataclass
 import logging
-from typing import Iterable
+from typing import Iterable, Union
 from pathlib import Path
 
 
@@ -131,9 +131,10 @@ class VMWriter:
         self.__write_line(f"pop {segment.name.lower()} {num}")
         return self
 
-    def write_arithmetic(self, operator: str) -> VMWriter:
+    def write_arithmetic(self, operator: Union[str, Operator]) -> VMWriter:
         """ Writes a VM arithmetic command"""
-        operator = Operator.from_symbol(operator)
+        if isinstance(operator, str):
+            operator = Operator.from_symbol(operator)
         if operator in OPERATOR_TO_OS_CALL:
             os_call = OPERATOR_TO_OS_CALL[operator]
             self.write_call(os_call, 2)
@@ -143,12 +144,16 @@ class VMWriter:
 
     def write_label(self, label: str) -> VMWriter:
         """ Writes a label """
-        self.__write_line(f"label {str}")
+        self.__write_line(f"label {label}")
         return self
+
+    def write_goto(self, label: str) -> VMWriter:
+        """ Writes a goto command """
+        self.__write_line(f"goto {label}")
 
     def write_if_goto(self, label: str) -> VMWriter:
         """ Writes an if-goto statement"""
-        self.__write_line(f"if-goto {str}")
+        self.__write_line(f"if-goto {label}")
         return self
 
     def write_call(self, func: str, num_args: int) -> VMWriter:
