@@ -3,6 +3,8 @@ from xml.dom import minidom
 from pathlib import Path
 import re
 import logging
+import json
+import dataclasses
 
 
 def write_xml_file(root_elem: ET.Element, jack_file: str, suffix: str):
@@ -30,3 +32,15 @@ def write_xml_file(root_elem: ET.Element, jack_file: str, suffix: str):
 
     with open(xml_path, 'w') as file:
         file.write(pretty_xml)
+
+
+def write_json_file(obj: dataclasses.dataclass, jack_file: str):
+    jack_path = Path(jack_file)
+    file_name_no_ext = jack_path.stem
+    json_path = jack_path.parent / f"{file_name_no_ext}.json"
+
+    obj_dict = dataclasses.asdict(obj)
+    js_st = json.dumps(obj_dict, indent=4)
+
+    with open(json_path, 'w') as file:
+        file.write(js_st)

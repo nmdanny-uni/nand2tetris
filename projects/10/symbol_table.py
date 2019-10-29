@@ -1,14 +1,27 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional
 
 
-class Kind(Enum):
+class Kind(str, Enum):
     """ Represents the kind of a symbol """
-    Static = 1
-    Field = 2
-    Arg = 3
-    Var = 4
+    Static = "static"
+    Field = "field"
+    Arg = "arg"
+    Var = "var"
+
+    @staticmethod
+    def from_str(s: str) -> Kind:
+        if s == "static":
+            return Kind.Static
+        if s == "field":
+            return Kind.Field
+        if s == "arg":
+            return Kind.Arg
+        if s == "var":
+            return Kind.Var
+        raise ValueError(f"Unknown variable kind \"{s}\"")
 
 
 @dataclass(frozen=True)

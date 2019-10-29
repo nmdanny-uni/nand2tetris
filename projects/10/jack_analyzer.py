@@ -6,6 +6,8 @@ from pathlib import Path
 from compilation_engine import CompilationEngine
 from tokenizer import Tokenizer
 import util
+import json
+import dataclasses
 
 args = None
 
@@ -36,6 +38,7 @@ class JackAnalyzer:
                     # emit ex11 .xml with semantic information only when debugging
                     if args.compile and args.verbose:
                         engine.emit_xml(semantic=True)
+                        engine.emit_json()
 
                     # emit ex11 .vm
                     if args.compile:
@@ -44,6 +47,7 @@ class JackAnalyzer:
             except Exception as ex:
                 logging.error(f"Encountered error while processing '{file}')")
                 logging.exception(ex)
+                raise
 
 
 def main():

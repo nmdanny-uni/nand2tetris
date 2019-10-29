@@ -6,54 +6,55 @@ import logging
 from pathlib import Path
 
 
-class Segment(Enum):
-    Const = 1,
-    Arg = 2,
-    Local = 3,
-    Static = 4,
-    This = 5,
-    That = 6,
-    Pointer = 7,
-    Temp = 8
+class Segment(str, Enum):
+    Const = "const",
+    Arg = "arg",
+    Local = "local",
+    Static = "static",
+    This = "this",
+    That = "that",
+    Pointer = "pointer",
+    Temp = "temp"
 
 
-class Operator(Enum):
-    Add = 1,
-    Sub = 2,
-    Neg = 3,
-    Eq = 4,
-    Gt = 5,
-    Lt = 6,
-    And = 7,
-    Or = 8,
-    Not = 9,
+class Operator(str, Enum):
+    Add = "add",
+    Sub = "sub",
+    Neg = "neg",
+    Eq = "eq",
+    Gt = "gt",
+    Lt = "lt",
+    And = "and",
+    Or = "or",
+    Not = "not",
     # uses OS implementations
-    Mul = 10,
-    Div = 11
+    Mul = "mul",
+    Div = "div"
 
-    OPERATOR_TO_OS_CALL = {
-        Mul: "Math.multiply",
-        Div: "Math.divide"
-    }
-
-    ST_TO_OPERATOR = {
-        "+": Add,
-        "-": Sub,
-        "=": Eq,
-        ">": Gt,
-        "<": Lt,
-        "&": And,
-        "|": Or,
-        "~": Not,
-        "*": Mul,
-        "/": Div
-    }
 
     @staticmethod
     def from_symbol(symbol: str) -> Operator:
-        if symbol in Operator.ST_TO_OPERATOR:
-            return Operator.ST_TO_OPERATOR[symbol]
+        if symbol in ST_TO_OPERATOR:
+            return ST_TO_OPERATOR[symbol]
         raise ValueError(f"\"{symbol}\" is not a valid symbol")
+
+OPERATOR_TO_OS_CALL = {
+    Operator.Mul: "Math.multiply",
+    Operator.Div: "Math.divide"
+}
+
+ST_TO_OPERATOR = {
+    "+": Operator.Add,
+    "-": Operator.Sub,
+    "=": Operator.Eq,
+    ">": Operator.Gt,
+    "<": Operator.Lt,
+    "&": Operator.And,
+    "|": Operator.Or,
+    "~": Operator.Not,
+    "*": Operator.Mul,
+    "/": Operator.Div
+}
 
 
 class VMWriter:
@@ -93,8 +94,8 @@ class VMWriter:
     def write_arithmetic(self, operator: str):
         """ Writes a VM arithmetic command"""
         operator = Operator.from_symbol(operator)
-        if operator in Operator.OPERATOR_TO_OS_CALL:
-            os_call = Operator.OPERATOR_TO_OS_CALL[operator]
+        if operator in OPERATOR_TO_OS_CALL:
+            os_call = OPERATOR_TO_OS_CALL[operator]
             self.write_call(os_call, 2)
         else:
             self.__write_line(f"{operator.name.lower()}")
