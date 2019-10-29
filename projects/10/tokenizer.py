@@ -1,9 +1,9 @@
 import logging
-from xml.etree import ElementTree as ET
 import re
 from typing import Iterator
 from jack_node import Token
-
+from xml_writer import XmlWriter
+import util
 
 class Tokenizer:
     """ Responsible for converting a .jack file to a list of tokens """
@@ -62,9 +62,12 @@ class Tokenizer:
                     token_type = "identifier"
             yield Token(token_type, contents, match.start())
 
-    def to_xml(self) -> ET.Element:
-        """ Returns the XML representation of the tokenized output """
-        tokens = ET.Element("tokens")
+    def emit_tokens_xml(self):
+        """ Emits a tokens .xml file alongside input jack file """
+        writer = XmlWriter()
+        writer.open_tag("tokens")
         for token in self.iter_tokens():
-            tokens.append(token.to_xml())
-        return tokens
+            writer.write_leaf(token.type, str(token.contents))
+        writer.close_tag("tokens")
+        root = writer.flush_to_element()
+        util.write_xml_file(root, self.__jack_path, "T")

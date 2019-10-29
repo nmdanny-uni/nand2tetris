@@ -28,7 +28,7 @@ class JackAnalyzer:
                 # emit raw tokenizer output
                 if args.verbose:
                     tokenizer = Tokenizer(file)
-                    util.write_xml_file(tokenizer.to_xml(), file, "T")
+                    tokenizer.emit_tokens_xml()
 
                 with CompilationEngine(file) as engine:
                     engine.run(emit_xml=(not args.compile) or args.verbose,
