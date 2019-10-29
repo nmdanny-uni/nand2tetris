@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass
-from typing import List, Union, Any, Optional, Tuple
+from typing import List, Union, Any, Optional, Tuple, TypeVar, Iterator
 from symbol_table import Kind
 from vm_writer import Operator
 from enum import Enum
@@ -167,3 +167,106 @@ class SubroutineCall(Term):
     call_type: SubroutineType
     subroutine_name: str  # might include the class with a dot
     arguments: List[Expression]
+
+
+@dataclass
+class ExpressionNode(ABC):
+    """ An AST representation of an expression that may be used for
+        compilation purposes. """
+
+    def iter_postorder_dfs(self) -> Iterator[ExpressionNode]:
+        """ Iterates over AST node in postorder notation.
+            This corresponds to RPN, which maps directly to the order of
+            VM instruction calls"""
+        if isinstance(self, (ExpressionLeaf, ExpressionArrayIndexer)):
+            yield self
+        elif isinstance(self, ExpressionOperator):
+            for operand in self.operands:
+                yield from operand.iter_postorder_dfs()
+            yield self
+
+    @staticmethod
+    def from_term(term: Term) -> ExpressionNode:
+        """ Transforms a term object into a node in the AST, recursively
+            transforming inner contents of terms if necessary. """
+        if isinstance(term, (KeywordConstant, IntegerConstant, StringConstant,
+                             VariableReference)):
+            return ExpressionLeaf(term)
+
+        if isinstance(term, UnaryOp):
+            return ExpressionOperator(term.operator,
+                                      [ExpressionNode.from_term(term.term)])
+
+        if isinstance(term, Parentheses):
+            return ExpressionNode.from_expression(term.expr)
+
+        if isinstance(term, ArrayIndexer):
+            indexer_expr = ExpressionNode.from_expression(term.index_expr)
+            return ExpressionArrayIndexer(term.array_var, indexer_expr)
+
+    @staticmethod
+    def from_expression(expr: Expression) -> ExpressionNode:
+        """ Transforms an expression(a sequence of terms joined by operators)
+            into an AST node. It doesn't handle order of operations(except
+             for parenthesized expressions), for example, it'll transform the
+             following:
+             1 * 2 + 3 / 4 * 5
+             into
+             ((((1*2)+3)/4)*5)
+             """
+
+        if len(expr.other) == 0:
+            return ExpressionNode.from_term(expr.term)
+
+        def helper(left: ExpressionNode,
+                   rest: List[Tuple[Operator, Term]]) -> ExpressionNode:
+            if len(rest) == 0:
+                return left
+
+            op, right_term = rest[0]
+            right = ExpressionNode.from_term(right_term)
+            joined = ExpressionOperator(op, [left, right])
+
+            return helper(joined, rest[1:])
+
+        return helper(ExpressionNode.from_term(expr.term),
+                      expr.other)
+
+
+@dataclass(init=False)
+class ExpressionLeaf(ExpressionNode):
+    """ A terminal node in the expression AST """
+    term: Term
+
+    def __init__(self, term: Term):
+        assert isinstance(term, (KeywordConstant, IntegerConstant,
+                                 StringConstant, VariableReference))
+        self.term = term
+
+
+@dataclass(init=False)
+class ExpressionOperator(ExpressionNode):
+    """ A unary/binary operator """
+    operator: Operator
+    operands: List[ExpressionNode]
+
+    def __init__(self, op: Operator, args: List[ExpressionNode]):
+        self.operator = op
+        self.operands = args
+
+
+@dataclass(init=False)
+class ExpressionArrayIndexer(ExpressionNode):
+    """ An array indexing operation """
+    array_name: str
+    index_expr: ExpressionNode
+
+    def __init__(self, array_name: str, index_expr: ExpressionNode):
+        self.array_name = array_name
+        self.index_expr = index_expr
+
+
+
+
+
+
