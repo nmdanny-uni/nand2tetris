@@ -81,7 +81,7 @@ class SubroutineArgument:
 
 
 @dataclass
-class Statement:
+class Statement(ABC):
     pass
 
 

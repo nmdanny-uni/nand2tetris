@@ -1,7 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import Dict, Optional
+import pandas
 
 
 class Kind(str, Enum):
@@ -72,4 +73,15 @@ class SymbolTable:
         """ Returns the number of variables of given kind """
         table = self.__get_table_for_kind(kind)
         return sum(1 for symbol in table.values() if symbol.kind is kind)
+
+    def __repr__(self):
+        class_symbols = [asdict(symbol) for symbol
+                         in self.__class_table.values()]
+        func_symbols = [asdict(symbol) for symbol
+                        in self.__func_table.values()]
+        class_df = pandas.DataFrame(class_symbols)
+        class_df_st = class_df.to_string(index=False)
+        func_df = pandas.DataFrame(func_symbols)
+        func_df_st = "Empty" if func_df.empty else func_df.to_string(index=False)
+        return f"Class table:\n{class_df_st}]\nFunction table:\n{func_df_st}"
 

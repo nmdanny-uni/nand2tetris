@@ -81,7 +81,7 @@ class VMWriter:
     def __write_line(self, st: str):
         """ Writes a single line to the VM file and also logs it"""
         self.__file.write(st+"\n")
-        logging.debug(st+"\n")
+        #logging.debug(st)
 
     def write_push(self, segment: Segment, num: int):
         """ Writes a VM push command """
