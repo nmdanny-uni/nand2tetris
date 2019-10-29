@@ -6,12 +6,14 @@ import json
 import util
 from jack_types import *
 from tokenizer import Tokenizer
-from vm_writer import *
 from symbol_table import *
 from xml_writer import XmlWriter, with_xml_tag
+from jack_compiler import JackCompiler
 
 class CompilationEngine:
-    """ Responsible for parsing a list of jack tokens"""
+    """ Responsible for parsing a single jack file, converting it to
+        semantic objects and then compiling them via JackCompiler.
+    """
 
     BUILT_IN_TYPES = ["int", "char", "boolean"]
     OPERATORS = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
@@ -28,26 +30,22 @@ class CompilationEngine:
         self.__symbol_table = SymbolTable()
         self.__xml_writer = XmlWriter()
 
-    def close(self):
-        """ Closes the VM writer"""
-        if self.__vm_writer:
-            self.__vm_writer.close()
-
-    def __enter__(self):
-        self.__vm_writer = VMWriter(self.__jack_file)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
     def run(self, emit_xml: bool, emit_vm: bool, emit_json: bool):
+        """ Runs the compiler
+
+            :param emit_xml Should we emit .xml (if we are on ex10)
+            :param emit_vm Should we emit .vm (if we are on ex11)
+            :param emit_json Should we emit .json (for debugging)
+
+        """
         self.__ix = 0  # reset the parser, just in case
         self.__xml_writer.reset()
         clazz = self.parse_class()
         if emit_xml:
             self.__xml_writer.flush_to_disk(self.__jack_file)
         if emit_vm:
-            self.__vm_writer.write_return()
+            compiler = JackCompiler(self.__jack_file, clazz)
+            compiler.run()
         if emit_json:
             util.write_json_file(clazz, self.__jack_file)
 
