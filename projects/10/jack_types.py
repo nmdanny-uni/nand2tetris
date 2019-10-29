@@ -116,12 +116,6 @@ class ReturnStatement(Statement):
 
 
 @dataclass
-class Expression(Semantic):
-    term: Term
-    other: List[Tuple[Operator, Term]]  # operators tupled with terms
-
-
-@dataclass
 class Term(Semantic):
     pass
 
@@ -170,11 +164,11 @@ class SubroutineCall(Term):
 
 
 @dataclass
-class ExpressionNode(ABC):
+class Expression(Semantic):
     """ An AST representation of an expression that may be used for
         compilation purposes. """
 
-    def iter_postorder_dfs(self) -> Iterator[ExpressionNode]:
+    def iter_postorder_dfs(self) -> Iterator[Expression]:
         """ Iterates over AST node in postorder notation.
             This corresponds to RPN, which maps directly to the order of
             VM instruction calls"""
@@ -186,7 +180,7 @@ class ExpressionNode(ABC):
             yield self
 
     @staticmethod
-    def from_term(term: Term) -> ExpressionNode:
+    def from_term(term: Term) -> Expression:
         """ Transforms a term object into a node in the AST, recursively
             transforming inner contents of terms if necessary. """
         if isinstance(term, (KeywordConstant, IntegerConstant, StringConstant,
@@ -195,46 +189,58 @@ class ExpressionNode(ABC):
 
         if isinstance(term, UnaryOp):
             return ExpressionOperator(term.operator,
-                                      [ExpressionNode.from_term(term.term)])
+                                      [Expression.from_term(term.term)])
 
         if isinstance(term, Parentheses):
-            return ExpressionNode.from_expression(term.expr)
+            return term.expr
 
         if isinstance(term, ArrayIndexer):
-            indexer_expr = ExpressionNode.from_expression(term.index_expr)
-            return ExpressionArrayIndexer(term.array_var, indexer_expr)
+            return ExpressionArrayIndexer(term.array_var, term.index_expr)
 
     @staticmethod
-    def from_expression(expr: Expression) -> ExpressionNode:
+    def from_expression(term: Term,
+                        others: List[Tuple[Operator, Term]]
+                        ) -> Expression:
         """ Transforms an expression(a sequence of terms joined by operators)
-            into an AST node. It doesn't handle order of operations(except
-             for parenthesized expressions), for example, it'll transform the
-             following:
+            into an AST node.
+
+             :param term: First term in an expression
+             :param others: List of operators followed by terms.
+
+             For example, the expression '1 + 2 + 3' would have
+             term = 1, others= [(+,2), (+,3)]
+
+             It doesn't handle order of operations(except for *), for example,
+             it'll transform the following:
              1 * 2 + 3 / 4 * 5
              into
              ((((1*2)+3)/4)*5)
+
+             * Parenthesized expressions are correctly handled, and unary
+             terms are given precedence
+
              """
 
-        if len(expr.other) == 0:
-            return ExpressionNode.from_term(expr.term)
+        if len(others) == 0:
+            return Expression.from_term(term)
 
-        def helper(left: ExpressionNode,
-                   rest: List[Tuple[Operator, Term]]) -> ExpressionNode:
+        def helper(left: Expression,
+                   rest: List[Tuple[Operator, Term]]) -> Expression:
             if len(rest) == 0:
                 return left
 
             op, right_term = rest[0]
-            right = ExpressionNode.from_term(right_term)
+            right = Expression.from_term(right_term)
             joined = ExpressionOperator(op, [left, right])
 
             return helper(joined, rest[1:])
 
-        return helper(ExpressionNode.from_term(expr.term),
-                      expr.other)
+        return helper(Expression.from_term(term),
+                      others)
 
 
 @dataclass(init=False)
-class ExpressionLeaf(ExpressionNode):
+class ExpressionLeaf(Expression):
     """ A terminal node in the expression AST """
     term: Term
 
@@ -245,23 +251,23 @@ class ExpressionLeaf(ExpressionNode):
 
 
 @dataclass(init=False)
-class ExpressionOperator(ExpressionNode):
+class ExpressionOperator(Expression):
     """ A unary/binary operator """
     operator: Operator
-    operands: List[ExpressionNode]
+    operands: List[Expression]
 
-    def __init__(self, op: Operator, args: List[ExpressionNode]):
+    def __init__(self, op: Operator, args: List[Expression]):
         self.operator = op
         self.operands = args
 
 
 @dataclass(init=False)
-class ExpressionArrayIndexer(ExpressionNode):
+class ExpressionArrayIndexer(Expression):
     """ An array indexing operation """
     array_name: str
-    index_expr: ExpressionNode
+    index_expr: Expression
 
-    def __init__(self, array_name: str, index_expr: ExpressionNode):
+    def __init__(self, array_name: str, index_expr: Expression):
         self.array_name = array_name
         self.index_expr = index_expr
 

@@ -20,7 +20,7 @@ def test_can_handle_ast():
     print()
     expr = string_to_semantic("1 * 2 + 3 / (4 * 5) + arr[5]",
                               CompilationEngine.parse_expression)
-    ast = ExpressionNode.from_expression(expr)
+    ast = Expression.from_expression(expr)
     print("\n"+json.dumps(asdict(ast), indent=4))
     for x in ast.iter_postorder_dfs():
         print(x)

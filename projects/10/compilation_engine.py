@@ -357,14 +357,14 @@ class CompilationEngine:
     @with_xml_tag("expression")
     def parse_expression(self) -> Expression:
         term = self.parse_term()
-        expr = Expression(term=term, other=[])
+        others = []
         while self.matches("symbol", *CompilationEngine.OPERATORS):
             operator = self.eat("symbol", *CompilationEngine.OPERATORS)
             operator_typed = Operator.from_symbol(operator.contents,
                                                   unary=False)
             term = self.parse_term()
-            expr.other.append((operator_typed, term))
-        return expr
+            others.append((operator_typed, term))
+        return Expression.from_expression(term, others)
 
     @with_xml_tag("term")
     def parse_term(self) -> Term:
