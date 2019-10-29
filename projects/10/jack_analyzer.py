@@ -31,18 +31,9 @@ class JackAnalyzer:
                     util.write_xml_file(tokenizer.to_xml(), file, "T")
 
                 with CompilationEngine(file) as engine:
-                    # emit ex10 .xml
-                    if not args.compile:
-                        engine.emit_xml(semantic=False)
-
-                    # emit ex11 .xml with semantic information only when debugging
-                    if args.compile and args.verbose:
-                        engine.emit_xml(semantic=True)
-                        engine.emit_json()
-
-                    # emit ex11 .vm
-                    if args.compile:
-                        engine.emit_vm()
+                    engine.run(emit_xml=(not args.compile) or args.verbose,
+                               emit_vm=args.compile,
+                               emit_json=args.verbose)
 
             except Exception as ex:
                 logging.error(f"Encountered error while processing '{file}')")

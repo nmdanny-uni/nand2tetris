@@ -8,7 +8,7 @@ from jack_node import *
 from tokenizer import Tokenizer
 from vm_writer import *
 from symbol_table import *
-
+from xml_writer import XmlWriter, with_xml_tag
 
 class CompilationEngine:
     """ Responsible for parsing a list of jack tokens"""
@@ -25,8 +25,8 @@ class CompilationEngine:
         self.__jack_file = jack_file
         self.__tokens = list(tokenizer.iter_tokens())
         self.__ix = 0
-        self.__parsed_class = self.parse_class()
         self.__symbol_table = SymbolTable()
+        self.__xml_writer = XmlWriter()
 
     def close(self):
         """ Closes the VM writer"""
@@ -40,31 +40,16 @@ class CompilationEngine:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def reset_parser(self):
-        """ Resets parser to initial state(first token) """
-        self.__ix = 0
-
-    def emit_xml(self, semantic: bool):
-        """ Emits an .xml file for the root node(class)
-            :param semantic Whether to include ex11 debugging related semantic
-                            information to node
-        """
-        self.reset_parser()
+    def run(self, emit_xml: bool, emit_vm: bool, emit_json: bool):
+        self.__ix = 0  # reset the parser, just in case
+        self.__xml_writer.reset()
         clazz = self.parse_class()
-        util.write_xml_file(clazz.to_xml(semantic=semantic), self.__jack_file, "")
-
-
-    def emit_json(self):
-        """ For debugging only"""
-        self.reset_parser()
-        clazz = self.parse_class().semantic
-        util.write_json_file(clazz, self.__jack_file)
-
-
-
-    def emit_vm(self):
-        """ Emits .vm code for the class """
-        self.__vm_writer.write_return()
+        if emit_xml:
+            self.__xml_writer.flush_to_disk(self.__jack_file)
+        if emit_vm:
+            self.__vm_writer.write_return()
+        if emit_json:
+            util.write_json_file(clazz, self.__jack_file)
 
     def __has_more_tokens(self) -> bool:
         """ Returns true if there are more tokens to eat """
@@ -97,6 +82,7 @@ class CompilationEngine:
         token = self.matches(expected_type, *contents)
         if not token:
             return None
+        self.__xml_writer.write_leaf(token.type, str(token.contents))
         self.__advance_token()
         return token
 
@@ -120,6 +106,8 @@ class CompilationEngine:
             token = self.eat("identifier")
         return token
 
+
+    @with_xml_tag("class")
     def parse_class(self) -> NonTerminalNode:
         identifier = self.eat("keyword", "class")
         class_name = self.eat("identifier")
@@ -145,6 +133,7 @@ class CompilationEngine:
             identifier, class_name, opener, *var_decs, *subroutines, closer
         ], semantic=semantic)
 
+    @with_xml_tag("classVarDec")
     def parse_class_variable_declaration(self) -> Tuple[NonTerminalNode,
                                                         List[ClassVariableDeclaration]]:
         var_decl_type = self.eat("keyword", "field", "static")
@@ -171,6 +160,7 @@ class CompilationEngine:
             var_decl_type, var_type, var_name, *extra_tokens, semicolon
         ]), semantics
 
+    @with_xml_tag("subroutineDec")
     def parse_subroutine(self) -> Tuple[NonTerminalNode, Subroutine]:
         subroutine_type = self.eat("keyword", "constructor", "function", "method")
         return_type = self.eat_type(include_void=True)
@@ -192,6 +182,7 @@ class CompilationEngine:
             body
         ]), semantic
 
+    @with_xml_tag("parameterList")
     def parse_parameter_list(self) -> Tuple[NonTerminalNode,
                                             List[SubroutineArgument]]:
         if self.matches("symbol", ")"):
@@ -217,6 +208,7 @@ class CompilationEngine:
 
         return NonTerminalNode(type="parameterList", contents=tokens), semantics
 
+    @with_xml_tag("subroutineBody")
     def parse_subroutine_body(self) -> Tuple[NonTerminalNode, SubroutineBody]:
         semantic = SubroutineBody(
             variable_declarations=[],
@@ -233,6 +225,7 @@ class CompilationEngine:
         body_closer = self.eat("symbol", "}")
         return NonTerminalNode(type="subroutineBody", contents=[body_opener, *var_decs, statements, body_closer]), semantic
 
+    @with_xml_tag("varDec")
     def parse_var_dec(self) -> Tuple[NonTerminalNode, List[SubroutineVariableDeclaration]]:
         dec = self.eat("keyword", "var")
         var_type = self.eat_type()
@@ -256,6 +249,7 @@ class CompilationEngine:
         semicolon = self.eat("symbol", ";")
         return NonTerminalNode(type="varDec", contents=[dec, var_type, var_name, *extra_vars, semicolon]), semantics
 
+    @with_xml_tag("statements")
     def parse_statements(self) -> Tuple[NonTerminalNode, List[Statement]]:
         statements = []
         statements_sem = []
@@ -287,6 +281,7 @@ class CompilationEngine:
 
         return NonTerminalNode(type="statements", contents=statements), statements_sem
 
+    @with_xml_tag("doStatement")
     def parse_do(self) -> Tuple[NonTerminalNode, DoStatement]:
         do = self.eat("keyword", "do")
         subroutine_call_tokens, call_sem = self.parse_subroutine_call()
@@ -330,6 +325,7 @@ class CompilationEngine:
         else:
             raise ValueError("Failed to parse subroutine call")
 
+    @with_xml_tag("letStatement")
     def parse_let(self) -> Tuple[NonTerminalNode, LetStatement]:
         tokens = []
         let = self.eat("keyword", "let")
@@ -350,6 +346,7 @@ class CompilationEngine:
                            assignment=expr_sem)
         return NonTerminalNode(type="letStatement", contents=tokens), sem
 
+    @with_xml_tag("whileStatement")
     def parse_while(self) -> Tuple[NonTerminalNode, WhileStatement]:
         while_tok = self.eat("keyword", "while")
         cond_opener = self.eat("symbol", "(")
@@ -364,6 +361,7 @@ class CompilationEngine:
             while_tok, cond_opener, cond_expr, cond_closer,
             block_opener, statements, block_closer]), sem
 
+    @with_xml_tag("returnStatement")
     def parse_return(self) -> Tuple[NonTerminalNode, ReturnStatement]:
         return_tok = self.eat("keyword", "return")
         if self.matches("symbol", ";"):
@@ -376,6 +374,7 @@ class CompilationEngine:
             return NonTerminalNode(type="returnStatement",
                                    contents=[return_tok, expr, semicolon]), ReturnStatement(return_expr=expr_sem)
 
+    @with_xml_tag("ifStatement")
     def parse_if(self) -> Tuple[NonTerminalNode, IfStatement]:
         if_tok = self.eat("keyword", "if")
         cond_opener = self.eat("symbol", "(")
@@ -397,6 +396,7 @@ class CompilationEngine:
         sem = IfStatement(condition = cond_sem, if_body=body_sem, else_body=else_sem)
         return NonTerminalNode(type="ifStatement", contents=tokens), sem
 
+    @with_xml_tag("expression")
     def parse_expression(self) -> Tuple[NonTerminalNode, Expression]:
         term, term_sem = self.parse_term()
         expr = Expression(term=term_sem, other=[])
@@ -410,6 +410,7 @@ class CompilationEngine:
             expr.other.append((operator_sem, term_sem))
         return NonTerminalNode(type="expression", contents=tokens), expr
 
+    @with_xml_tag("term")
     def parse_term(self) -> Tuple[NonTerminalNode, Term]:
         # trivial cases where we have an integer/string/keyword constant
         token = self.eat_optional("integerConstant")
@@ -459,6 +460,7 @@ class CompilationEngine:
             # we have a plain variable reference
             return NonTerminalNode(type="term", contents=[identifier]), VariableReference(var_name=identifier.contents)
 
+    @with_xml_tag("expressionList")
     def parse_expression_list(self) -> Tuple[NonTerminalNode, List[Expression]]:
         if self.matches("symbol", ")"):
             return NonTerminalNode(type="expressionList", contents=[]), []
@@ -473,7 +475,3 @@ class CompilationEngine:
             exprs_sem.append(expr_sem)
         return NonTerminalNode(type="expressionList", contents=tokens), exprs_sem
 
-    def to_xml(self) -> ET.Element:
-        """ Returns the XML representation of the parse tree represented
-            by the file's parse tree """
-        return self.__parsed_class.to_xml()
