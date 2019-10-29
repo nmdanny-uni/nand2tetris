@@ -1,7 +1,7 @@
 import logging
 import re
 from typing import Iterator
-from jack_node import Token
+from jack_types import Token
 from xml_writer import XmlWriter
 import util
 

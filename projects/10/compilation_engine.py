@@ -4,7 +4,7 @@ import logging
 import dataclasses
 import json
 import util
-from jack_node import *
+from jack_types import *
 from tokenizer import Tokenizer
 from vm_writer import *
 from symbol_table import *

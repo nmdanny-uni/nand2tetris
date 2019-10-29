@@ -1,28 +1,6 @@
-""" This module defines two important type hierarchies:
-    - Node, representing a node in the parse tree of a jack program,
-      which may be one of:
-
-      - Token, a terminal node
-      - NonTerminalNode, a node that may have children
-
-    These have methods that convert them to .XML(a pretty simple operation once
-    we've built the entire parse tree)
-    in addition, each node has a 'semantic' field, which is used in ex11:
-
-    - Semantic, representing a node in the program's structure, this doesn't
-      have unnecessary child-nodes such as commas, colons and other structural
-      elements that were required for ex10. It can be thought as a type-safe
-      wrapper for Node, and contains properties and methods relevant to the
-      ex11 compilation process.
-
-      (For debugging purposes, semantic objects may be included in .xml when
-       running via a verbose flag, but usually their main use is compilation)
-
-"""
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
-from xml.etree import ElementTree as ET
+from abc import ABC
+from dataclasses import dataclass
 from typing import List, Union, Any, Optional, Tuple
 from symbol_table import Kind
 from vm_writer import Operator
@@ -36,10 +14,12 @@ class Token:
     contents: Union[str, int]  # int for an integerConstant, string otherwise
     file_pos: int  # used for error reporting, token's position(index) in file
 
+
 class Semantic(ABC):
-    """ A semantic object is used to enrich a node in the parse tree with
-        information that will be used in parsing. It is essentially a cleaner
-        version of 'Node' (without unnecessary symbols, e.g colons, commas...)
+    """ A semantic object is a node in the program's parse tree consisting of
+        essential information for compilation, presented in a type-safe manner
+        alongside various enums. It can also define various methods to be used
+        for compilation.
         """
 
 
