@@ -133,7 +133,8 @@ class VMWriter:
 
     def write_comment(self, comment: str) -> VMWriter:
         """ Writes a 1-line comment """
-        self.__write_line(f"// {comment}")
+        for line in comment.split("\n"):
+            self.__write_line(f"// {line}")
         return self
 
     def write_multiline_comment(self, comments: Iterable[str]) -> VMWriter:
@@ -225,4 +226,9 @@ class VMWriter:
         self.write_push(Segment.from_kind(symbol.kind), symbol.index)
         return self
 
+    def write_pop_to_symbol(self, symbol: Symbol) -> VMWriter:
+        """ Writes a command to pop the value at the top of the stack, to the
+            place occupied by given symbol. """
+        self.write_pop(Segment.from_kind(symbol.kind), symbol.index)
+        return self
 

@@ -4,6 +4,7 @@ from vm_writer import *
 from symbol_table import *
 import logging
 from dataclasses import dataclass, asdict
+from collections import defaultdict
 import json
 
 
@@ -17,7 +18,7 @@ class JackCompiler:
         self.__symbol_table = SymbolTable()
         self.__writer = VMWriter(jack_path)
         self.__class = clazz
-        self.__label_count = 0
+        self.__label_count = {}
 
     def run(self):
         """ Runs the compiler, emitting results to a .vm file """
@@ -26,9 +27,9 @@ class JackCompiler:
 
     def gen_label(self, prefix: str = "") -> str:
         """ Generates a new label """
-        label = f"{prefix}{self.__label_count}"
-        self.__label_count += 1
-        return label
+        label_ix = self.__label_count.get(prefix, 0)
+        self.__label_count[prefix] = label_ix + 1
+        return f"{prefix}{label_ix}"
 
     def compile_class(self):
         clazz = self.__class
@@ -45,7 +46,7 @@ class JackCompiler:
     def compile_subroutine(self, subroutine: Subroutine):
         # reset labels for better readability within subroutines
 
-        self.__label_count = 0
+        self.__label_count.clear()
         self.__symbol_table.start_subroutine()
 
         # first step, updating symbol table
@@ -73,7 +74,9 @@ class JackCompiler:
         # writing the function's body
         num_args = len(subroutine.arguments) + (1 if subroutine.subroutine_type
                                                 is SubroutineType.Method else 0)
-        self.__writer.write_function(subroutine.canonical_name, num_args)
+        num_locals = sum(1 for arg in subroutine.body.variable_declarations
+                         if arg.kind is Kind.Var)
+        self.__writer.write_function(subroutine.canonical_name, num_locals)
 
         # Anchoring 'this' to the current object
         if subroutine.subroutine_type == SubroutineType.Method:
@@ -83,7 +86,7 @@ class JackCompiler:
 
         # constructing an object instance, this also requires updating the
         # symbol table
-        elif subroutine.subroutine_type == SubroutineType.Constructor:
+        if subroutine.subroutine_type == SubroutineType.Constructor:
             self.__writer.write_comment("Creating object instance and "
                                         "anchoring to 'this")
             self.__writer.write_call("Memory.alloc",
@@ -128,8 +131,10 @@ class JackCompiler:
 
     def __debug_comment_operation(self, semantic: Semantic):
         js = json.dumps(asdict(semantic), indent=4).split("\n")
-        self.__writer.write_comment(f"compiling {type(semantic)}")
-        self.__writer.write_multiline_comment(js)
+        #self.__writer.write_comment(f"compiling {type(semantic)}")
+        #self.__writer.write_multiline_comment(js)
+        self.__writer.write_comment('')
+        self.__writer.write_comment(repr(semantic))
 
     def compile_statements(self, statements: List[Statement]):
         for statement in statements:
@@ -152,14 +157,14 @@ class JackCompiler:
 
     def compile_if_statement(self, statement: IfStatement):
         # generation of labels
-        at_end_of_statement = self.gen_label("end_of_if_statement")
+        at_end_of_statement = self.gen_label("endOfIfStatement")
         condition_failed = at_end_of_statement
         if statement.else_body is not None:
-            condition_failed = self.gen_label("else_body")
+            condition_failed = self.gen_label("elseBody")
 
         # computing ~condition onto stack
         self.compile_expression(statement.condition)
-        self.__writer.write_arithmetic(Operator.Neg)
+        self.__writer.write_arithmetic(Operator.Not)
         # go to else body(if exists) or end of statement in case
         # condition failed
         self.__writer.write_if_goto(condition_failed)
@@ -182,12 +187,12 @@ class JackCompiler:
         self.__writer.write_pop(Segment.Temp, 0)
 
     def compile_while_statement(self, statement: WhileStatement):
-        loop_condition_check = self.gen_label("loop_body")
-        after_loop = self.gen_label("after_loop")
+        loop_condition_check = self.gen_label("WHILE_EXP")
+        after_loop = self.gen_label("WHILE_END")
 
         self.__writer.write_label(loop_condition_check)
         self.compile_expression(statement.condition)
-        self.__writer.write_arithmetic(Operator.Neg)
+        self.__writer.write_arithmetic(Operator.Not)
         # exiting loop if condition doesn't hold
         self.__writer.write_if_goto(after_loop)
         # loop body
@@ -195,10 +200,19 @@ class JackCompiler:
         # checking loop condition again
         self.__writer.write_goto(loop_condition_check)
 
-        self.gen_label(after_loop)
+        self.__writer.write_label(after_loop)
 
     def compile_let_statement(self, statement: LetStatement):
         # raise NotImplementedError("Let statement")
+        assignee = self.__symbol_table[statement.var_name]
+        if not assignee:
+            raise ValueError(f"Cant perform let on undeclared variable")
+        if statement.var_index_expr is not None:
+            self.__writer.write_comment("TODO let for array cells")
+        if assignee.kind == Kind.Field:
+            self.__writer.write_comment("TODO let for object fields")
+        self.compile_expression(statement.assignment)
+        self.__writer.write_pop_to_symbol(assignee)
         pass
 
     def compile_return_statement(self, statement: ReturnStatement):
@@ -238,7 +252,7 @@ class JackCompiler:
 
     def compile_expression(self, expr: Expression):
         """ Compiles an expression """
-        self.__writer.write_comment(f"Compiling {expr}")
+        # self.__writer.write_comment(f"Compiling expression {expr}")
         i = 0
         while i < len(expr.elements):
             element = expr.elements[i]
@@ -290,3 +304,42 @@ class JackCompiler:
         else:
             raise NotImplementedError(f"TODO impl compile term of type {type(term)}")
 
+
+# def compile_expression_old(self, expr: Expression):
+#     """ Compiles an entire expression AST, so that'll the result of the
+#         expression will be at the head of the stack. """
+#     self.__debug_comment_operation(expr)
+#         for cur in expr.iter_postorder_dfs():
+#             self.compile_expression_part(cur)
+#
+#     def compile_expression_part_old(self, expr: Expression):
+#         """ Compiles a single 'part' of an Expression node, that is,
+#             it ignores children.
+#         """
+#         if isinstance(expr, ExpressionOperator):
+#             self.__writer.write_arithmetic(expr.operator)
+#         elif isinstance(expr, ExpressionLeaf):
+#             if isinstance(expr.term, IntegerConstant):
+#                 self.__writer.write_push(Segment.Const, expr.term.value)
+#             elif isinstance(expr.term, KeywordConstant):
+#                 if expr.term.value == "this":
+#                     self.__writer.write_push(Segment.Pointer, 0)
+#                 else:
+#                     val = JackCompiler.KEYWORD_TO_CONST[expr.term.value]
+#                     if val < 0:
+#                         self.__writer \
+#                             .write_push(Segment.Const, -val)\
+#                             .write_arithmetic(Operator.Neg)
+#                     else:
+#                         self.__writer.write_push(Segment.Const, val)
+#             elif isinstance(expr.term, Identifier):
+#                 sym = self.__symbol_table[expr.term.name]
+#                 if not sym:
+#                     raise ValueError("Expression refers to an identifier not in scope")
+#                 self.__writer.write_push_symbol(sym)
+#             else:
+#                 raise NotImplementedError(f"TODO handling expression leaves of type {type(expr.term)}")
+#                 pass
+#         elif isinstance(expr, ExpressionArrayIndexer):
+#             raise NotImplementedError("TODO array indexing")
+#

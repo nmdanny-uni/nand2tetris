@@ -110,6 +110,11 @@ class LetStatement(Statement):
     var_index_expr: Optional[Expression]
     assignment: Expression
 
+    def __repr__(self):
+        if self.var_index_expr:
+            return f"let {self.var_name}[{self.var_index_expr}] = {self.assignment}"
+        return f"let {self.var_name} = {self.assignment}"
+
 
 @dataclass
 class IfStatement(Statement):
@@ -117,21 +122,39 @@ class IfStatement(Statement):
     if_body: List[Statement]
     else_body: Optional[List[Statement]]
 
+    def __repr__(self):
+        body = "\n".join(repr(stmt) for stmt in self.if_body)
+        st = f"if ({self.condition}) {{\n {body} }}"
+        if self.else_body:
+            body = "\n".join(repr(stmt) for stmt in self.else_body)
+            st += f" else {{ {body} }}"
+
+        return st
 
 @dataclass
 class WhileStatement(Statement):
     condition: Expression
     body: List[Statement]
 
+    def __repr__(self):
+        body = "\n".join(repr(stmt) for stmt in self.body)
+        return f"while ({self.condition}) {{\n {body} }}"
+
 
 @dataclass
 class DoStatement(Statement):
     call: SubroutineCall
 
+    def __repr__(self):
+        return f"do {self.call}"
+
 
 @dataclass
 class ReturnStatement(Statement):
     return_expr: Optional[Expression]
+
+    def __repr__(self):
+        return f"return {repr(self.return_expr) if self.return_expr else ''}"
 
 
 @dataclass
