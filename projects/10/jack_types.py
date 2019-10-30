@@ -1,5 +1,5 @@
 from __future__ import annotations
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Union, Any, Optional, Tuple, TypeVar, Iterator
 from symbol_table import Kind
@@ -57,10 +57,17 @@ class SubroutineType(str, Enum):
 @dataclass
 class Subroutine:
     subroutine_type: SubroutineType
+    class_name: str
     name: str
     arguments: List[SubroutineArgument]
     return_type: Optional[str]
     body: SubroutineBody
+
+    @property
+    def canonical_name(self) -> str:
+        """ Returns the full name of the subroutine as per the standard VM
+            mapping """
+        return f"{self.class_name}_{self.name}"
 
 @dataclass
 class SubroutineBody:
@@ -81,7 +88,7 @@ class SubroutineArgument:
 
 
 @dataclass
-class Statement(ABC):
+class Statement(Semantic):
     pass
 
 
@@ -135,8 +142,8 @@ class KeywordConstant(Term):
 
 
 @dataclass
-class VariableReference(Term):
-    var_name: str
+class Identifier(Term):
+    name: str
 
 
 @dataclass
@@ -158,9 +165,33 @@ class Parentheses(Term):
 
 @dataclass
 class SubroutineCall(Term):
-    call_type: SubroutineType
-    subroutine_name: str  # might include the class with a dot
+
+    # determined at parse time, the part before the dot
+    # it is None for local method calls
+    subroutine_class_or_self: Optional[str]
+
+    # the name after the dot (not a proper function name)
+    subroutine_name: str
+
+    # argument expressions, not including the 'this' parameter
     arguments: List[Expression]
+
+    # the subroutines's class, this is filled by JackCompiler as it requires
+    # knowledge of the symbol table
+    subroutine_class: Optional[str] = None
+
+    # the 'this' variable name(from callers point of view), in case this is
+    # a method call. Empty for static function/constructor call
+    subroutine_this: Optional[Union[KeywordConstant, Identifier]] = None
+
+    @property
+    def canonical_name(self) -> str:
+        """ The full name of the subroutine according to VM standard
+            mapping """
+        if not self.subroutine_class:
+            raise ValueError("Cannot determine canonical name of subroutine"
+                             "call without knowing its class(need to analyze)")
+        return f"{self.subroutine_class}.{self.subroutine_name}"
 
 
 @dataclass
@@ -168,23 +199,19 @@ class Expression(Semantic):
     """ An AST representation of an expression that may be used for
         compilation purposes. """
 
+    @abstractmethod
     def iter_postorder_dfs(self) -> Iterator[Expression]:
         """ Iterates over AST node in postorder notation.
             This corresponds to RPN, which maps directly to the order of
             VM instruction calls"""
-        if isinstance(self, (ExpressionLeaf, ExpressionArrayIndexer)):
-            yield self
-        elif isinstance(self, ExpressionOperator):
-            for operand in self.operands:
-                yield from operand.iter_postorder_dfs()
-            yield self
+        raise NotImplementedError("")
 
     @staticmethod
     def from_term(term: Term) -> Expression:
         """ Transforms a term object into a node in the AST, recursively
             transforming inner contents of terms if necessary. """
         if isinstance(term, (KeywordConstant, IntegerConstant, StringConstant,
-                             VariableReference)):
+                             Identifier)):
             return ExpressionLeaf(term)
 
         if isinstance(term, UnaryOp):
@@ -195,7 +222,12 @@ class Expression(Semantic):
             return term.expr
 
         if isinstance(term, ArrayIndexer):
-            return ExpressionArrayIndexer(term.array_var, term.index_expr)
+            return ExpressionArrayIndexer(term)
+
+        if isinstance(term, SubroutineCall):
+            return ExpressionSubroutineCall(term)
+
+        raise NotImplementedError(f"BUG: forgot to convert {type(term)} to ast")
 
     @staticmethod
     def from_expression(term: Term,
@@ -246,8 +278,11 @@ class ExpressionLeaf(Expression):
 
     def __init__(self, term: Term):
         assert isinstance(term, (KeywordConstant, IntegerConstant,
-                                 StringConstant, VariableReference))
+                                 StringConstant, Identifier))
         self.term = term
+
+    def iter_postorder_dfs(self) -> Iterator[Expression]:
+        yield self
 
 
 @dataclass(init=False)
@@ -260,19 +295,34 @@ class ExpressionOperator(Expression):
         self.operator = op
         self.operands = args
 
+    def iter_postorder_dfs(self) -> Iterator[Expression]:
+        for operand in self.operands:
+            yield from operand.iter_postorder_dfs()
+        yield self
+
 
 @dataclass(init=False)
 class ExpressionArrayIndexer(Expression):
     """ An array indexing operation """
-    array_name: str
-    index_expr: Expression
+    indexer: ArrayIndexer
 
-    def __init__(self, array_name: str, index_expr: Expression):
-        self.array_name = array_name
-        self.index_expr = index_expr
+    def __init__(self, indexer: ArrayIndexer):
+        self.indexer = indexer
+
+    def iter_postorder_dfs(self) -> Iterator[Expression]:
+        yield self
 
 
+@dataclass(init=False)
+class ExpressionSubroutineCall(Expression):
+    """ A subroutine call expression """
+    call: SubroutineCall
 
+    def __init__(self, call: SubroutineCall):
+        self.call = call
+
+    def iter_postorder_dfs(self) -> Iterator[Expression]:
+        yield self
 
 
 

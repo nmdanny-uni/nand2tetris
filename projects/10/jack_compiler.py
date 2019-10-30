@@ -60,6 +60,31 @@ class JackCompiler:
         for statement in subroutine.body.statements:
             self.compile_statement(statement)
 
+    def __analyze_subroutine_call(self, call: SubroutineCall):
+        """ Analyzes a subroutine call, updating essential fields """
+
+        if call.subroutine_class:
+            # if we already analyzed this call
+            return
+
+        if not call.subroutine_class_or_self:
+            # this is a local method class
+            call.subroutine_class = self.__class.class_name
+            # the method's "this" is the same as our "this"
+            call.subroutine_this = KeywordConstant("this")
+        else:
+            # either a static or a method call
+            symbol = self.__symbol_table[call.subroutine_class_or_self]
+            if not symbol:
+                # static call
+                call.subroutine_class = call.subroutine_class_or_self
+            else:
+                # method call
+                call.subroutine_class = symbol.type
+                call.subroutine_this = Identifier(symbol.name)
+
+
+
     def __debug_comment_operation(self, semantic: Semantic):
         js = json.dumps(asdict(semantic), indent=4).split("\n")
         self.__writer.write_comment(f"compiling {type(semantic)}")

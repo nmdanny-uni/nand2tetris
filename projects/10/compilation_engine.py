@@ -120,7 +120,7 @@ class CompilationEngine:
             var_dec = self.parse_class_variable_declaration()
             clazz.variable_declarations.extend(var_dec)
         while self.matches("keyword", "constructor", "function", "method"):
-            subroutine = self.parse_subroutine()
+            subroutine = self.parse_subroutine(clazz)
             clazz.subroutines.append(subroutine)
         self.eat("symbol", "}")
         return clazz
@@ -148,7 +148,7 @@ class CompilationEngine:
         return classes
 
     @with_xml_tag("subroutineDec")
-    def parse_subroutine(self) -> Subroutine:
+    def parse_subroutine(self, clazz: Class) -> Subroutine:
         subroutine_type = self.eat("keyword", "constructor", "function", "method")
         return_type = self.eat_type(include_void=True)
         var_name = self.eat("identifier")
@@ -159,6 +159,7 @@ class CompilationEngine:
         subroutine = Subroutine(
             subroutine_type=SubroutineType.from_str(subroutine_type.contents),
             name=var_name.contents,
+            class_name=clazz.class_name,
             arguments=arguments,
             return_type=(None if return_type.contents == "void"
                          else return_type.contents),
@@ -276,8 +277,9 @@ class CompilationEngine:
             self.eat("symbol", "(")
             args = self.parse_expression_list()
             self.eat("symbol", ")")
-            return SubroutineCall(call_type=SubroutineType.Method, # TODO determine this?
-                                  subroutine_name=identifier.contents,
+            return SubroutineCall(subroutine_name=identifier.contents,
+                                  subroutine_class_or_self=None,
+                                  subroutine_class="TODO current class",
                                   arguments=args)
 
         elif self.matches("symbol", "."):
@@ -289,10 +291,10 @@ class CompilationEngine:
             self.eat("symbol", "(")
             args = self.parse_expression_list()
             self.eat("symbol", ")")
-            full_name = f"{identifier.contents}.{subroutine_name.contents}"
-            return SubroutineCall(call_type=SubroutineType.Method,
-                                  subroutine_name=full_name,
-                                  arguments=args)
+            return SubroutineCall(
+                subroutine_class_or_self=identifier.contents,
+                subroutine_name=subroutine_name.contents,
+                arguments=args)
         else:
             raise ValueError("Failed to parse subroutine call")
 
@@ -410,7 +412,7 @@ class CompilationEngine:
             return self.parse_subroutine_call(identifier=identifier)
         else:
             # we have a plain variable reference
-            return VariableReference(var_name=identifier.contents)
+            return Identifier(var_name=identifier.contents)
 
     @with_xml_tag("expressionList")
     def parse_expression_list(self) -> List[Expression]:

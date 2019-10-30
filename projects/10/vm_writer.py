@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import logging
 from typing import Iterable, Union
 from pathlib import Path
+from symbol_table import Symbol, Kind
 
 
 class Segment(str, Enum):
@@ -17,6 +18,21 @@ class Segment(str, Enum):
     Pointer = "pointer",
     Temp = "temp"
 
+    @staticmethod
+    def from_kind(kind: Kind) -> Segment:
+        """ Returns the segment that stores the given symbol.
+            NOTE: When dealing with a field variable, proper use of the segment
+                  requires anchoring the 'this' pointer to the field's belonging
+                  class. """
+        if kind is Kind.Var:
+            return Segment.Local
+        if kind is Kind.Arg:
+            return Segment.Arg
+        if kind is Kind.Static:
+            return Segment.Static
+        if kind is Kind.Field:
+            return Segment.This
+        raise ValueError(f"Unsupported kind {kind}")
 
 class Operator(str, Enum):
     Add = "add",
@@ -45,11 +61,13 @@ class Operator(str, Enum):
             A 'unary' flag may be passed to signify that this is a unary
             operator (to differ between 'neg' and 'sub')
         """
-        op = None
         if unary:
             op = ST_TO_UNARY_OPERATOR.get(symbol, None)
         else:
             op = ST_TO_BINARY_OPERATOR.get(symbol, None)
+
+        if not op:
+            op = Operator[symbol.title()]
 
         if not op:
             raise ValueError(f"\"{symbol}\" is not a valid operator")
@@ -80,7 +98,8 @@ ST_TO_UNARY_OPERATOR = {
 
 class VMWriter:
     """ Emits VM instructions to a vm file
-        This class has a fluent style (you can chain write_ methods)
+        This class has a fluent style (you can chain write_ methods), moreover
+        it contains higher-level writing methods compared to the proposed API.
      """
     def __init__(self, jack_file: str):
         """ Creates a VM writer for a corresponding jack file path """
@@ -150,6 +169,7 @@ class VMWriter:
     def write_goto(self, label: str) -> VMWriter:
         """ Writes a goto command """
         self.__write_line(f"goto {label}")
+        return self
 
     def write_if_goto(self, label: str) -> VMWriter:
         """ Writes an if-goto statement"""
@@ -172,4 +192,33 @@ class VMWriter:
         """ Writes a return instruction """
         self.__write_line("return")
         return self
+
+    ##################################################
+    # the following are higher level writing methods #
+
+    def write_class_anchor(self):
+        """ Writes a command to pop the head of the stack(assumed to be a
+            pointer to an object) to pointer[0] segment, so that push/pop
+            operations to the 'this' segment will affect that object.
+            """
+        self.write_pop(Segment.Pointer, 0)
+        return self
+
+    def write_array_anchor(self) -> VMWriter:
+        """ Writes a command to pop the head of the stack(assumed to be a
+            pointer to an array cell) to pointer[1] segment, so that push/pop
+            operations to the 'that' segment will affect that cell.
+            """
+        self.write_pop(Segment.Pointer, 1)
+        return self
+
+    def write_push_symbol(self, symbol: Symbol) -> VMWriter:
+        """ Writes command to push a symbol(analyzed identifier) to the top of
+            the stack.
+            NOTE: Requires the 'this' segment to be properly anchored to the
+                  current class
+            """
+        self.write_push(Segment.from_kind(symbol.kind), symbol.index)
+        return self
+
 

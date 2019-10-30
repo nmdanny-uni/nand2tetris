@@ -25,6 +25,12 @@ class Kind(str, Enum):
         raise ValueError(f"Unknown variable kind \"{s}\"")
 
 
+class Scope(str, Enum):
+    """ Represents the scope of a symbol"""
+    Class = "class"
+    Subroutine = "Subroutine"
+
+
 @dataclass(frozen=True)
 class Symbol:
     """ Represents a symbol in a symbol table
@@ -34,6 +40,9 @@ class Symbol:
     type: str
     kind: Kind
     index: int
+    scope: Scope = (Scope.Class if Kind in (Kind.Static, Kind.Field) else
+                    Scope.Subroutine)
+
 
 
 class SymbolTable:
