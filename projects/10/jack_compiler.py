@@ -89,8 +89,9 @@ class JackCompiler:
         if subroutine.subroutine_type == SubroutineType.Constructor:
             self.__writer.write_comment("Creating object instance and "
                                         "anchoring to 'this")
-            self.__writer.write_call("Memory.alloc",
+            self.__writer.write_push(Segment.Const,
                                      self.__class.class_size_in_words)
+            self.__writer.write_call("Memory.alloc", 1)
             self.__writer.write_pop(Segment.Pointer, 0)
             self.__symbol_table.define(name="this",
                                        sym_type=self.__class.class_name,
@@ -104,7 +105,7 @@ class JackCompiler:
     def __analyze_subroutine_call(self, call: SubroutineCall):
         """ Analyzes a subroutine call, updating essential fields """
 
-        if call.subroutine_class:
+        if call.subroutine_class is not None:
             # if we already analyzed this call
             return
 
@@ -117,22 +118,22 @@ class JackCompiler:
         else:
             # either a static or a method call
             symbol = self.__symbol_table[call.subroutine_class_or_self]
-            if not symbol:
-                # static call
-                call.subroutine_class = call.subroutine_class_or_self
-                call.call_type = SubroutineType.Function
-            else:
+            if symbol:
                 # method call
                 call.subroutine_class = symbol.type
                 call.subroutine_this = Identifier(symbol.name)
                 call.call_type = SubroutineType.Method
+            else:
+                # static call
+                call.subroutine_class = call.subroutine_class_or_self
+                call.call_type = SubroutineType.Function
 
 
 
     def __debug_comment_operation(self, semantic: Semantic):
         js = json.dumps(asdict(semantic), indent=4).split("\n")
-        #self.__writer.write_comment(f"compiling {type(semantic)}")
-        #self.__writer.write_multiline_comment(js)
+        self.__writer.write_comment(f"compiling {type(semantic)}:")
+        self.__writer.write_multiline_comment(js)
         self.__writer.write_comment('')
         self.__writer.write_comment(repr(semantic))
 
@@ -157,10 +158,10 @@ class JackCompiler:
 
     def compile_if_statement(self, statement: IfStatement):
         # generation of labels
-        at_end_of_statement = self.gen_label("endOfIfStatement")
+        at_end_of_statement = self.gen_label("IF_END")
         condition_failed = at_end_of_statement
         if statement.else_body is not None:
-            condition_failed = self.gen_label("elseBody")
+            condition_failed = self.gen_label("IF_FALSE")
 
         # computing ~condition onto stack
         self.compile_expression(statement.condition)
@@ -230,18 +231,26 @@ class JackCompiler:
         self.__analyze_subroutine_call(call)
         self.__debug_comment_operation(call)
         self.__writer.write_comment(f"compiling subroutine call {call}")
-        # TODO include 'this' as argument if we're calling a variable (variable = in symbol table)
-        # we are doing a method call IFF there's no identifier before the dot
-        # (implicit)
         num_args = len(call.arguments)
+
+        # pushing the method's invoker (this/some other identifier)
         if call.call_type is SubroutineType.Method:
             num_args = num_args + 1
-            this = self.__symbol_table["this"]
-            assert this is not None, "'this' should exist in symbol table"
-            self.__writer.write_push_symbol(this)
-
+            if isinstance(call.subroutine_this, KeywordConstant):
+                self.__writer.write_comment("local method(using 'this')")
+                self.__writer.write_push(Segment.Pointer, 0)
+            elif isinstance(call.subroutine_this, Identifier):
+                self.__writer.write_comment("external method")
+                symbol = self.__symbol_table[call.subroutine_this.name]
+                assert symbol is not None
+                self.__writer.write_push_symbol(symbol)
+            else:
+                raise ValueError("Impossible")
+        else:
+            self.__writer.write_comment("static(function/constructor)")
         for arg in call.arguments:
             self.compile_expression(arg)
+
         self.__writer.write_call(call.canonical_name, num_args)
 
     KEYWORD_TO_CONST = {
@@ -250,27 +259,31 @@ class JackCompiler:
         "false": 0
     }
 
-    def compile_expression(self, expr: Expression):
-        """ Compiles an expression """
-        # self.__writer.write_comment(f"Compiling expression {expr}")
-        i = 0
-        while i < len(expr.elements):
-            element = expr.elements[i]
-            if isinstance(element, Operator):
-                if element.num_args == 1:
-                    self.__writer.write_arithmetic(element)
-                else:
-                    # we've already written first operand previous iter
-                    if (i + 1 >= len(expr.elements) or
-                            not isinstance(expr.elements[i + 1], Term)):
-                        raise ValueError("Expected a term after binary operator")
-                    self.compile_term(expr.elements[i+1])
-                    self.__writer.write_arithmetic(element)
-                    # skip that term at the next iteration
-                    i += 1
-            else:
-                self.compile_term(element)
-            i += 1
+    def compile_expression(self, expr: Union[Expression, Term]):
+        """ Compiles an expression(or delegates compilation of a term) """
+        self.__debug_comment_operation(expr)
+
+        if isinstance(expr, Term):
+            self.compile_term(expr)
+            return
+
+        if len(expr.elements) == 1:
+            return self.compile_expression(expr.elements[0])
+
+        if len(expr.elements) >= 3 and isinstance(expr.elements[1], Operator):
+            assert isinstance(expr.elements[0], Term)
+            assert isinstance(expr.elements[2], Term)
+
+            # convert everything to the right of the operator to an expression,
+            # so we'll be able to handle it recursively
+            right_expr = Expression(elements=expr.elements[2:])
+
+            self.compile_expression(expr.elements[0])
+            self.compile_expression(right_expr)
+            self.__writer.write_arithmetic(expr.elements[1])
+            return
+
+        raise ValueError("Impossible, all other scenarios were handled")
 
     def compile_term(self, term: Term):
         """ Compiles a single term"""
@@ -305,41 +318,3 @@ class JackCompiler:
             raise NotImplementedError(f"TODO impl compile term of type {type(term)}")
 
 
-# def compile_expression_old(self, expr: Expression):
-#     """ Compiles an entire expression AST, so that'll the result of the
-#         expression will be at the head of the stack. """
-#     self.__debug_comment_operation(expr)
-#         for cur in expr.iter_postorder_dfs():
-#             self.compile_expression_part(cur)
-#
-#     def compile_expression_part_old(self, expr: Expression):
-#         """ Compiles a single 'part' of an Expression node, that is,
-#             it ignores children.
-#         """
-#         if isinstance(expr, ExpressionOperator):
-#             self.__writer.write_arithmetic(expr.operator)
-#         elif isinstance(expr, ExpressionLeaf):
-#             if isinstance(expr.term, IntegerConstant):
-#                 self.__writer.write_push(Segment.Const, expr.term.value)
-#             elif isinstance(expr.term, KeywordConstant):
-#                 if expr.term.value == "this":
-#                     self.__writer.write_push(Segment.Pointer, 0)
-#                 else:
-#                     val = JackCompiler.KEYWORD_TO_CONST[expr.term.value]
-#                     if val < 0:
-#                         self.__writer \
-#                             .write_push(Segment.Const, -val)\
-#                             .write_arithmetic(Operator.Neg)
-#                     else:
-#                         self.__writer.write_push(Segment.Const, val)
-#             elif isinstance(expr.term, Identifier):
-#                 sym = self.__symbol_table[expr.term.name]
-#                 if not sym:
-#                     raise ValueError("Expression refers to an identifier not in scope")
-#                 self.__writer.write_push_symbol(sym)
-#             else:
-#                 raise NotImplementedError(f"TODO handling expression leaves of type {type(expr.term)}")
-#                 pass
-#         elif isinstance(expr, ExpressionArrayIndexer):
-#             raise NotImplementedError("TODO array indexing")
-#

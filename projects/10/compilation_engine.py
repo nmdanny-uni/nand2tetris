@@ -279,7 +279,6 @@ class CompilationEngine:
             self.eat("symbol", ")")
             return SubroutineCall(subroutine_name=identifier.contents,
                                   subroutine_class_or_self=None,
-                                  subroutine_class="TODO current class",
                                   arguments=args)
 
         elif self.matches("symbol", "."):
