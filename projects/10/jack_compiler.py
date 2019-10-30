@@ -209,12 +209,26 @@ class JackCompiler:
         if not assignee:
             raise ValueError(f"Cant perform let on undeclared variable")
         if statement.var_index_expr is not None:
-            self.__writer.write_comment("TODO let for array cells")
-        if assignee.kind == Kind.Field:
-            self.__writer.write_comment("TODO let for object fields")
-        self.compile_expression(statement.assignment)
-        self.__writer.write_pop_to_symbol(assignee)
-        pass
+            self.compile_expression(statement.var_index_expr)
+            self.__writer.write_push_symbol(assignee)
+            self.__writer.write_arithmetic(Operator.Add)
+            # head of stack contains &arr[index_expr]
+
+            self.compile_expression(statement.assignment)
+            # now head of stack contains assignment result, lets temporarily
+            # move it away to the temp
+            self.__writer.write_pop(Segment.Temp, 0)
+
+            # now that head of stack contains &arr[index_expr], we can point
+            # 'that' at &arr[index_expr]
+            self.__writer.write_pop(Segment.Pointer, 1)
+            # finally we assign it with the assignment's result
+            self.__writer.write_push(Segment.Temp, 0)
+            self.__writer.write_pop(Segment.That, 0)
+
+        else:
+            self.compile_expression(statement.assignment)
+            self.__writer.write_pop_to_symbol(assignee)
 
     def compile_return_statement(self, statement: ReturnStatement):
         if statement.return_expr is not None:
