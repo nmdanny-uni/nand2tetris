@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Iterable, Union
 from enum import Enum
 from dataclasses import dataclass
 import logging
-from typing import Iterable, Union
 from pathlib import Path
 from symbol_table import Symbol, Kind
 
@@ -34,17 +33,22 @@ class Segment(str, Enum):
             return Segment.This
         raise ValueError(f"Unsupported kind {kind}")
 
+
 class Operator(str, Enum):
+    """ A unary/binary operator, which might or might not need special OS
+        support. """
+
+    # Strings below are only used for debugging purposes
     Add = "+",
     Sub = "-",
-    Neg = "-",
+    Neg = "neg-",
     Eq = "=",
     Gt = ">",
     Lt = "<",
     And = "&",
     Or = "|",
     Not = "~",
-    # uses OS implementations
+    # the following use OS implementation
     Mul = "*",
     Div = "/"
 
@@ -66,16 +70,9 @@ class Operator(str, Enum):
             operator (to differ between 'neg' and 'sub')
         """
         if unary:
-            op = ST_TO_UNARY_OPERATOR.get(symbol, None)
+            return ST_TO_UNARY_OPERATOR[symbol]
         else:
-            op = ST_TO_BINARY_OPERATOR.get(symbol, None)
-
-        if not op:
-            op = Operator[symbol.title()]
-
-        if not op:
-            raise ValueError(f"\"{symbol}\" is not a valid operator")
-        return op
+            return ST_TO_BINARY_OPERATOR[symbol]
 
 
 OPERATOR_TO_OS_CALL = {
@@ -133,12 +130,16 @@ class VMWriter:
 
     def write_comment(self, comment: str) -> VMWriter:
         """ Writes a 1-line comment """
+        if logging.getLogger().level is not logging.DEBUG:
+            return self
         for line in comment.split("\n"):
             self.__write_line(f"// {line}")
         return self
 
     def write_multiline_comment(self, comments: Iterable[str]) -> VMWriter:
         """ writes a multiline comment """
+        if logging.getLogger().level is not logging.DEBUG:
+            return self
         self.__write_line("/*")
         for comment in comments:
             self.__write_line(f" * {comment}")
