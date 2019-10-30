@@ -98,7 +98,7 @@ class JackCompiler:
                                        kind=Kind.Field)
 
 
-        logging.debug(f"Symbol tables for {subroutine.canonical_name}:\n{self.__symbol_table}\n")
+        self.__writer.write_comment(f"Symbol tables for {subroutine.canonical_name}:\n{self.__symbol_table}\n")
         for statement in subroutine.body.statements:
             self.compile_statement(statement)
 
@@ -311,7 +311,7 @@ class JackCompiler:
         elif isinstance(term, ArrayIndexer):
             self.__writer.write_comment("TODO array indexing")
         elif isinstance(term, StringConstant):
-            self.__writer.write_comment("TODO string constant")
+            self.__writer.write_push_string(term.value)
         elif isinstance(term, SubroutineCall):
             self.compile_subroutine_call(term)
         else:

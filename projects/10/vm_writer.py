@@ -152,6 +152,15 @@ class VMWriter:
         self.__write_line(f"push {segment.value} {num}")
         return self
 
+    def write_push_string(self, st: str) -> VMWriter:
+        """ Writes VM commands to create a string literal """
+        self.write_push(Segment.Const, len(st))
+        self.write_call("String.new", 1)
+        for char in st:
+            self.write_push(Segment.Const, ord(char))
+            self.write_call("String.appendChar", 2)
+        return self
+
     def write_pop(self, segment: Segment, num: int) -> VMWriter:
         """ Writes a VM pop command """
         assert num >= 0

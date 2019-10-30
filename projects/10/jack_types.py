@@ -41,7 +41,8 @@ class Class:
     def class_size_in_words(self) -> int:
         """ Returns the number of words(16-bit integers) needed to store
             this class in the heap """
-        return len(self.variable_declarations)
+        return sum(1 for decl in self.variable_declarations
+                   if decl.kind is Kind.Field)
 
 
 class SubroutineType(str, Enum):
