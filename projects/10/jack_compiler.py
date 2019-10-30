@@ -323,7 +323,15 @@ class JackCompiler:
                                  f"identifier \"{term.name}\"")
             self.__writer.write_push_symbol(sym)
         elif isinstance(term, ArrayIndexer):
-            self.__writer.write_comment("TODO array indexing")
+            sym = self.__symbol_table[term.array_var]
+            if not sym:
+                raise ValueError(f"Expression contains unresolved array "
+                                 f"identifier \"{term.array_var}\"")
+            self.compile_expression(term.index_expr)
+            self.__writer.write_push_symbol(sym)
+            self.__writer.write_arithmetic(Operator.Add)
+            self.__writer.write_pop(Segment.Pointer, 1)
+            self.__writer.write_push(Segment.That, 0)
         elif isinstance(term, StringConstant):
             self.__writer.write_push_string(term.value)
         elif isinstance(term, SubroutineCall):
