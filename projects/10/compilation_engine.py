@@ -358,15 +358,15 @@ class CompilationEngine:
 
     @with_xml_tag("expression")
     def parse_expression(self) -> Expression:
-        term = self.parse_term()
-        others = []
+        expr = Expression(elements=[])
+        expr.elements.append(self.parse_term())
         while self.matches("symbol", *CompilationEngine.OPERATORS):
             operator = self.eat("symbol", *CompilationEngine.OPERATORS)
             operator_typed = Operator.from_symbol(operator.contents,
                                                   unary=False)
             term = self.parse_term()
-            others.append((operator_typed, term))
-        return Expression.from_expression(term, others)
+            expr.elements.extend([operator_typed, term])
+        return expr
 
     @with_xml_tag("term")
     def parse_term(self) -> Term:
@@ -411,8 +411,8 @@ class CompilationEngine:
             # we are performing a subroutine call
             return self.parse_subroutine_call(identifier=identifier)
         else:
-            # we have a plain variable reference
-            return Identifier(var_name=identifier.contents)
+            # we have a plain identifier to a variable
+            return Identifier(name=identifier.contents)
 
     @with_xml_tag("expressionList")
     def parse_expression_list(self) -> List[Expression]:

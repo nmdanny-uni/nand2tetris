@@ -9,8 +9,8 @@ from symbol_table import Symbol, Kind
 
 
 class Segment(str, Enum):
-    Const = "const",
-    Arg = "arg",
+    Const = "constant",
+    Arg = "argument",
     Local = "local",
     Static = "static",
     This = "this",
@@ -35,19 +35,23 @@ class Segment(str, Enum):
         raise ValueError(f"Unsupported kind {kind}")
 
 class Operator(str, Enum):
-    Add = "add",
-    Sub = "sub",
-    Neg = "neg",
-    Eq = "eq",
-    Gt = "gt",
-    Lt = "lt",
-    And = "and",
-    Or = "or",
-    Not = "not",
+    Add = "+",
+    Sub = "-",
+    Neg = "-",
+    Eq = "=",
+    Gt = ">",
+    Lt = "<",
+    And = "&",
+    Or = "|",
+    Not = "~",
     # uses OS implementations
-    Mul = "mul",
-    Div = "div"
+    Mul = "*",
+    Div = "/"
 
+    def __repr__(self):
+        return self.value
+
+    @property
     def num_args(self) -> int:
         """ Returns the number of arguments used by this operator """
         if self in [Operator.Neg, Operator.Not]:
@@ -56,7 +60,7 @@ class Operator(str, Enum):
 
 
     @staticmethod
-    def from_symbol(symbol: str, unary: bool = False) -> Operator:
+    def from_symbol(symbol: str, unary: bool) -> Operator:
         """ Converts a string symbol into an operator
             A 'unary' flag may be passed to signify that this is a unary
             operator (to differ between 'neg' and 'sub')
@@ -108,6 +112,7 @@ class VMWriter:
         self.__class_name = file_name_no_ext
         self.__vm_path = jack_path.parent / f"{file_name_no_ext}.vm"
         self.__file = open(self.__vm_path, mode='w')
+        self.__debugging_buffer: List[str] = []
 
     def close(self):
         """ Closes the VM file """
@@ -123,7 +128,8 @@ class VMWriter:
     def __write_line(self, st: str):
         """ Writes a single line to the VM file and also logs it"""
         self.__file.write(st+"\n")
-        #logging.debug(st)
+        print(st)
+        logging.debug(st)
 
     def write_comment(self, comment: str) -> VMWriter:
         """ Writes a 1-line comment """
@@ -141,19 +147,17 @@ class VMWriter:
     def write_push(self, segment: Segment, num: int) -> VMWriter:
         """ Writes a VM push command """
         assert num >= 0
-        self.__write_line(f"push {segment.name.lower()} {num}")
+        self.__write_line(f"push {segment.value} {num}")
         return self
 
     def write_pop(self, segment: Segment, num: int) -> VMWriter:
         """ Writes a VM pop command """
         assert num >= 0
-        self.__write_line(f"pop {segment.name.lower()} {num}")
+        self.__write_line(f"pop {segment.value} {num}")
         return self
 
-    def write_arithmetic(self, operator: Union[str, Operator]) -> VMWriter:
+    def write_arithmetic(self, operator: Operator) -> VMWriter:
         """ Writes a VM arithmetic command"""
-        if isinstance(operator, str):
-            operator = Operator.from_symbol(operator)
         if operator in OPERATOR_TO_OS_CALL:
             os_call = OPERATOR_TO_OS_CALL[operator]
             self.write_call(os_call, 2)

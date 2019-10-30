@@ -17,12 +17,18 @@ class JackCompiler:
         self.__symbol_table = SymbolTable()
         self.__writer = VMWriter(jack_path)
         self.__class = clazz
+        self.__label_count = 0
 
     def run(self):
         """ Runs the compiler, emitting results to a .vm file """
         self.compile_class()
         self.__writer.close()
 
+    def gen_label(self, prefix: str = "") -> str:
+        """ Generates a new label """
+        label = f"{prefix}{self.__label_count}"
+        self.__label_count += 1
+        return label
 
     def compile_class(self):
         clazz = self.__class
@@ -37,16 +43,24 @@ class JackCompiler:
             self.compile_subroutine(subroutine)
 
     def compile_subroutine(self, subroutine: Subroutine):
-        subroutine_name = f"{self.__class.class_name}.{subroutine.name}"
-        num_args = len(subroutine.arguments)
+        # reset labels for better readability within subroutines
+
+        self.__label_count = 0
         self.__symbol_table.start_subroutine()
+
+        # first step, updating symbol table
+        if subroutine.subroutine_type == SubroutineType.Method:
+            self.__symbol_table.define(
+                name="this",
+                sym_type=self.__class.class_name,
+                kind=Kind.Arg
+            )
         for arg in subroutine.arguments:
             self.__symbol_table.define(
                 name=arg.name,
                 sym_type=arg.type,
                 kind=Kind.Arg
             )
-
         for var in subroutine.body.variable_declarations:
             assert var.kind is Kind.Var
             self.__symbol_table.define(
@@ -55,8 +69,32 @@ class JackCompiler:
                 kind=var.kind
             )
 
-        logging.debug(f"Symbol tables for {subroutine_name}:\n{self.__symbol_table}\n")
-        self.__writer.write_function(subroutine_name, num_args)
+
+        # writing the function's body
+        num_args = len(subroutine.arguments) + (1 if subroutine.subroutine_type
+                                                is SubroutineType.Method else 0)
+        self.__writer.write_function(subroutine.canonical_name, num_args)
+
+        # Anchoring 'this' to the current object
+        if subroutine.subroutine_type == SubroutineType.Method:
+            self.__writer.write_comment("Anchoring 'this'")
+            self.__writer.write_push(Segment.Arg, 0)
+            self.__writer.write_pop(Segment.Pointer, 0)
+
+        # constructing an object instance, this also requires updating the
+        # symbol table
+        elif subroutine.subroutine_type == SubroutineType.Constructor:
+            self.__writer.write_comment("Creating object instance and "
+                                        "anchoring to 'this")
+            self.__writer.write_call("Memory.alloc",
+                                     self.__class.class_size_in_words)
+            self.__writer.write_pop(Segment.Pointer, 0)
+            self.__symbol_table.define(name="this",
+                                       sym_type=self.__class.class_name,
+                                       kind=Kind.Field)
+
+
+        logging.debug(f"Symbol tables for {subroutine.canonical_name}:\n{self.__symbol_table}\n")
         for statement in subroutine.body.statements:
             self.compile_statement(statement)
 
@@ -70,6 +108,7 @@ class JackCompiler:
         if not call.subroutine_class_or_self:
             # this is a local method class
             call.subroutine_class = self.__class.class_name
+            call.call_type = SubroutineType.Method
             # the method's "this" is the same as our "this"
             call.subroutine_this = KeywordConstant("this")
         else:
@@ -78,10 +117,12 @@ class JackCompiler:
             if not symbol:
                 # static call
                 call.subroutine_class = call.subroutine_class_or_self
+                call.call_type = SubroutineType.Function
             else:
                 # method call
                 call.subroutine_class = symbol.type
                 call.subroutine_this = Identifier(symbol.name)
+                call.call_type = SubroutineType.Method
 
 
 
@@ -89,6 +130,10 @@ class JackCompiler:
         js = json.dumps(asdict(semantic), indent=4).split("\n")
         self.__writer.write_comment(f"compiling {type(semantic)}")
         self.__writer.write_multiline_comment(js)
+
+    def compile_statements(self, statements: List[Statement]):
+        for statement in statements:
+            self.compile_statement(statement)
 
     def compile_statement(self, statement: Statement):
         self.__debug_comment_operation(statement)
@@ -106,24 +151,84 @@ class JackCompiler:
             raise ValueError("Impossible/I forgot a statement?")
 
     def compile_if_statement(self, statement: IfStatement):
-        #raise NotImplementedError("If statement")
-        pass
+        # generation of labels
+        at_end_of_statement = self.gen_label("end_of_if_statement")
+        condition_failed = at_end_of_statement
+        if statement.else_body is not None:
+            condition_failed = self.gen_label("else_body")
+
+        # computing ~condition onto stack
+        self.compile_expression(statement.condition)
+        self.__writer.write_arithmetic(Operator.Neg)
+        # go to else body(if exists) or end of statement in case
+        # condition failed
+        self.__writer.write_if_goto(condition_failed)
+        # body of 'if' branch
+        self.compile_statements(statement.if_body)
+        # skip the 'else branch'(only needed if there is an 'else')
+        if statement.else_body is not None:
+            self.__writer.write_goto(at_end_of_statement)
+
+        if statement.else_body is not None:
+            # body of 'else' branch
+            self.__writer.write_label(condition_failed)
+            self.compile_statements(statement.else_body)
+
+        self.__writer.write_label(at_end_of_statement)
 
     def compile_do_statement(self, statement: DoStatement):
-        # raise NotImplementedError("Do statement")
-        pass
+        self.compile_subroutine_call(statement.call)
+        # ignore the returned value by dumping it to temp segment
+        self.__writer.write_pop(Segment.Temp, 0)
 
     def compile_while_statement(self, statement: WhileStatement):
-        # raise NotImplementedError("While statement")
-        pass
+        loop_condition_check = self.gen_label("loop_body")
+        after_loop = self.gen_label("after_loop")
+
+        self.__writer.write_label(loop_condition_check)
+        self.compile_expression(statement.condition)
+        self.__writer.write_arithmetic(Operator.Neg)
+        # exiting loop if condition doesn't hold
+        self.__writer.write_if_goto(after_loop)
+        # loop body
+        self.compile_statements(statement.body)
+        # checking loop condition again
+        self.__writer.write_goto(loop_condition_check)
+
+        self.gen_label(after_loop)
 
     def compile_let_statement(self, statement: LetStatement):
         # raise NotImplementedError("Let statement")
         pass
 
     def compile_return_statement(self, statement: ReturnStatement):
-        # raise NotImplementedError("Return statement")
-        pass
+        if statement.return_expr is not None:
+            self.compile_expression(statement.return_expr)
+        else:
+            # we are on a void function, we'll ensure we're returning 0
+            self.__writer.write_push(Segment.Const, 0)
+
+        self.__writer.write_return()
+
+    def compile_subroutine_call(self, call: SubroutineCall):
+        """ Compiles a subroutine, so that at the end of the call, the result
+            will be at the head of the stack. """
+        self.__analyze_subroutine_call(call)
+        self.__debug_comment_operation(call)
+        self.__writer.write_comment(f"compiling subroutine call {call}")
+        # TODO include 'this' as argument if we're calling a variable (variable = in symbol table)
+        # we are doing a method call IFF there's no identifier before the dot
+        # (implicit)
+        num_args = len(call.arguments)
+        if call.call_type is SubroutineType.Method:
+            num_args = num_args + 1
+            this = self.__symbol_table["this"]
+            assert this is not None, "'this' should exist in symbol table"
+            self.__writer.write_push_symbol(this)
+
+        for arg in call.arguments:
+            self.compile_expression(arg)
+        self.__writer.write_call(call.canonical_name, num_args)
 
     KEYWORD_TO_CONST = {
         "null": 0,
@@ -132,30 +237,56 @@ class JackCompiler:
     }
 
     def compile_expression(self, expr: Expression):
-        """ Compiles an entire expression AST """
-        self.__debug_comment_operation(expr)
-        for cur in expr.iter_postorder_dfs():
-            self.compile_expression_part(cur)
-
-    def compile_expression_part(self, expr: Expression):
-        """ Compiles a single 'part' of an Expression node, that is,
-            it ignores children.
-        """
-        if isinstance(expr, ExpressionOperator):
-            self.__writer.write_arithmetic(expr.operator)
-        elif isinstance(expr, ExpressionLeaf):
-            if isinstance(expr.term, IntegerConstant):
-                self.__writer.write_push(Segment.Const, expr.term.value)
-            elif isinstance(expr.term, KeywordConstant):
-                val = JackCompiler.KEYWORD_TO_CONST[expr.term.value]
-                if val < 0:
-                    self.__writer \
-                        .write_push(Segment.Const, -val)\
-                        .write_arithmetic(Operator.Neg)
+        """ Compiles an expression """
+        self.__writer.write_comment(f"Compiling {expr}")
+        i = 0
+        while i < len(expr.elements):
+            element = expr.elements[i]
+            if isinstance(element, Operator):
+                if element.num_args == 1:
+                    self.__writer.write_arithmetic(element)
                 else:
-                    self.__writer.write_push(Segment.Const, val)
+                    # we've already written first operand previous iter
+                    if (i + 1 >= len(expr.elements) or
+                            not isinstance(expr.elements[i + 1], Term)):
+                        raise ValueError("Expected a term after binary operator")
+                    self.compile_term(expr.elements[i+1])
+                    self.__writer.write_arithmetic(element)
+                    # skip that term at the next iteration
+                    i += 1
             else:
-                raise NotImplementedError(f"TODO handling expression leaves of type {type(expr)}")
-        elif isinstance(expr, ExpressionArrayIndexer):
-            raise NotImplementedError("TODO array indexing")
+                self.compile_term(element)
+            i += 1
+
+    def compile_term(self, term: Term):
+        """ Compiles a single term"""
+        if isinstance(term, Parentheses):
+            self.compile_expression(term.expr)
+        elif isinstance(term, UnaryOp):
+            self.compile_term(term.term)
+            self.__writer.write_arithmetic(term.operator)
+        elif isinstance(term, IntegerConstant):
+            self.__writer.write_push(Segment.Const, term.value)
+        elif isinstance(term, KeywordConstant):
+            if term.value == "this":
+                self.__writer.write_push(Segment.Pointer, 0)
+            else:
+                num_value = JackCompiler.KEYWORD_TO_CONST[term.value]
+                self.__writer.write_push(Segment.Const, abs(num_value))
+                if num_value < 0:
+                    self.__writer.write_arithmetic(Operator.Neg)
+        elif isinstance(term, Identifier):
+            sym = self.__symbol_table[term.name]
+            if not sym:
+                raise ValueError(f"Expression contains unresolved "
+                                 f"identifier \"{term.name}\"")
+            self.__writer.write_push_symbol(sym)
+        elif isinstance(term, ArrayIndexer):
+            self.__writer.write_comment("TODO array indexing")
+        elif isinstance(term, StringConstant):
+            self.__writer.write_comment("TODO string constant")
+        elif isinstance(term, SubroutineCall):
+            self.compile_subroutine_call(term)
+        else:
+            raise NotImplementedError(f"TODO impl compile term of type {type(term)}")
 

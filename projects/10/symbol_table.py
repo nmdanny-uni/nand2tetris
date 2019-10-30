@@ -40,8 +40,6 @@ class Symbol:
     type: str
     kind: Kind
     index: int
-    scope: Scope = (Scope.Class if Kind in (Kind.Static, Kind.Field) else
-                    Scope.Subroutine)
 
 
 
@@ -82,6 +80,15 @@ class SymbolTable:
         """ Returns the number of variables of given kind """
         table = self.__get_table_for_kind(kind)
         return sum(1 for symbol in table.values() if symbol.kind is kind)
+
+    def get_scope(self, symbol: Symbol) -> Scope:
+        """ Gets the scope of a variable """
+        if symbol.name in self.__func_table:
+            return Scope.Subroutine
+        elif symbol.name in self.__class_table:
+            return Scope.Class
+        raise ValueError(f"Symbol \"{symbol}\" is invalid, doesn't belong to"
+                         f"any scope")
 
     def __repr__(self):
         class_symbols = [asdict(symbol) for symbol
