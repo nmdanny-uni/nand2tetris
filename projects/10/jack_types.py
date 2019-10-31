@@ -33,7 +33,6 @@ class ClassVariableDeclaration:
 @dataclass
 class Class:
     class_name: str
-    class_file_path: str
     variable_declarations: List[ClassVariableDeclaration]
     subroutines: List[Subroutine]
 

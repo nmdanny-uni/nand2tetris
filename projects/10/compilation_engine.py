@@ -20,34 +20,13 @@ class CompilationEngine:
     UNARY_OPERATORS = ["-", "~"]
     KEYWORD_CONSTANTS = ["true", "false", "null", "this"]
 
-    def __init__(self, jack_file: str):
+    def __init__(self, tokens: List[Token], xml_writer: XmlWriter):
         """ Creates and runs the parser over the given token list
         """
-        tokenizer = Tokenizer(jack_file)
-        self.__jack_file = jack_file
-        self.__tokens = list(tokenizer.iter_tokens())
+        self.__tokens = tokens
         self.__ix = 0
         self.__symbol_table = SymbolTable()
-        self.__xml_writer = XmlWriter()
-
-    def run(self, emit_xml: bool, emit_vm: bool, emit_json: bool):
-        """ Runs the compiler
-
-            :param emit_xml Should we emit .xml (if we are on ex10)
-            :param emit_vm Should we emit .vm (if we are on ex11)
-            :param emit_json Should we emit .json (for debugging)
-
-        """
-        self.__ix = 0  # reset the parser, just in case
-        self.__xml_writer.reset()
-        clazz = self.parse_class()
-        if emit_xml:
-            self.__xml_writer.flush_to_disk(self.__jack_file)
-        if emit_vm:
-            compiler = JackCompiler(self.__jack_file, clazz)
-            compiler.run()
-        if emit_json:
-            util.write_json_file(clazz, self.__jack_file)
+        self.__xml_writer = xml_writer
 
     def __has_more_tokens(self) -> bool:
         """ Returns true if there are more tokens to eat """
@@ -112,7 +91,6 @@ class CompilationEngine:
         self.eat("symbol", "{")
         clazz = Class(
             class_name=class_name.contents,
-            class_file_path=str(self.__jack_file),
             variable_declarations=[],
             subroutines=[]
         )

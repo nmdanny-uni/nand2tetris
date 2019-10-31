@@ -2,28 +2,22 @@ from __future__ import annotations
 from jack_types import *
 from vm_writer import *
 from symbol_table import *
+from util import dataclass_to_json_string
 import logging
 from dataclasses import dataclass, asdict
-from collections import defaultdict
-import json
 
 
 
 class JackCompiler:
     """ Responsible for compiling a .jack source file, by recursively
         analyzing a Class object """
-    def __init__(self, jack_path: str, clazz: Class):
+    def __init__(self, vm_writer: VMWriter, clazz: Class):
         """ Initializes the compiler for a given path and a fully parsed
             class """
         self.__symbol_table = SymbolTable()
-        self.__writer = VMWriter(jack_path)
+        self.__writer = vm_writer
         self.__class = clazz
         self.__label_count = {}
-
-    def run(self):
-        """ Runs the compiler, emitting results to a .vm file """
-        self.compile_class()
-        self.__writer.close()
 
     def gen_label(self, prefix: str = "") -> str:
         """ Generates a new label """
@@ -131,9 +125,9 @@ class JackCompiler:
 
 
     def __debug_comment_operation(self, semantic: Semantic):
-        js = json.dumps(asdict(semantic), indent=4).split("\n")
         self.__writer.write_comment(f"compiling {type(semantic)}:")
-        self.__writer.write_multiline_comment(js)
+        self.__writer.write_multiline_comment(
+            dataclass_to_json_string(semantic))
         self.__writer.write_comment('')
         self.__writer.write_comment(repr(semantic))
 

@@ -98,51 +98,39 @@ ST_TO_UNARY_OPERATOR = {
 }
 
 class VMWriter:
-    """ Emits VM instructions to a vm file
-        This class has a fluent style (you can chain write_ methods), moreover
-        it contains higher-level writing methods compared to the proposed API.
+    """ Emits VM instructions to a .vm file
      """
-    def __init__(self, jack_file: str):
+    def __init__(self, path: str):
         """ Creates a VM writer for a corresponding jack file path """
-        jack_path = Path(jack_file)
-        file_name_no_ext = jack_path.stem
-        self.__class_name = file_name_no_ext
-        self.__vm_path = jack_path.parent / f"{file_name_no_ext}.vm"
-        self.__file = open(self.__vm_path, mode='w')
+        self.__path = path
+        self.__file = open(self.__path, mode='w')
         self.__debugging_buffer: List[str] = []
 
     def close(self):
-        """ Closes the VM file """
+        """ Closes the VM file and flushes it to disk """
         if self.__file:
             self.__file.close()
-
-    def __enter__(self):
-        self.__file = open(self.__vm_path, mode='w')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
 
     def __write_line(self, st: str):
         """ Writes a single line to the VM file and also logs it"""
         self.__file.write(st+"\n")
-        print(st)
         logging.debug(st)
 
     def write_comment(self, comment: str) -> VMWriter:
-        """ Writes a 1-line comment """
+        """ Writes a 1-line comment(only if in debug mode) """
         if logging.getLogger().level is not logging.DEBUG:
             return self
         for line in comment.split("\n"):
             self.__write_line(f"// {line}")
         return self
 
-    def write_multiline_comment(self, comments: Iterable[str]) -> VMWriter:
-        """ writes a multiline comment """
+    def write_multiline_comment(self, comment: str) -> VMWriter:
+        """ Writes a multiline comment(only if in debug mode) """
         if logging.getLogger().level is not logging.DEBUG:
             return self
         self.__write_line("/*")
-        for comment in comments:
-            self.__write_line(f" * {comment}")
+        for line in comment.split("\n"):
+            self.__write_line(f" * {line}")
         self.__write_line("*/")
         return self
 
@@ -150,6 +138,15 @@ class VMWriter:
         """ Writes a VM push command """
         assert num >= 0
         self.__write_line(f"push {segment.value} {num}")
+        return self
+
+    def write_push_symbol(self, symbol: Symbol) -> VMWriter:
+        """ Writes command to push a symbol(analyzed identifier) to the top of
+            the stack.
+            NOTE: Requires the 'this' segment to be properly anchored to the
+                  current class
+            """
+        self.write_push(Segment.from_kind(symbol.kind), symbol.index)
         return self
 
     def write_push_string(self, st: str) -> VMWriter:
@@ -165,6 +162,12 @@ class VMWriter:
         """ Writes a VM pop command """
         assert num >= 0
         self.__write_line(f"pop {segment.value} {num}")
+        return self
+
+    def write_pop_to_symbol(self, symbol: Symbol) -> VMWriter:
+        """ Writes a command to pop the value at the top of the stack, to the
+            place occupied by given symbol. """
+        self.write_pop(Segment.from_kind(symbol.kind), symbol.index)
         return self
 
     def write_arithmetic(self, operator: Operator) -> VMWriter:
@@ -206,39 +209,5 @@ class VMWriter:
     def write_return(self) -> VMWriter:
         """ Writes a return instruction """
         self.__write_line("return")
-        return self
-
-    ##################################################
-    # the following are higher level writing methods #
-
-    def write_class_anchor(self):
-        """ Writes a command to pop the head of the stack(assumed to be a
-            pointer to an object) to pointer[0] segment, so that push/pop
-            operations to the 'this' segment will affect that object.
-            """
-        self.write_pop(Segment.Pointer, 0)
-        return self
-
-    def write_array_anchor(self) -> VMWriter:
-        """ Writes a command to pop the head of the stack(assumed to be a
-            pointer to an array cell) to pointer[1] segment, so that push/pop
-            operations to the 'that' segment will affect that cell.
-            """
-        self.write_pop(Segment.Pointer, 1)
-        return self
-
-    def write_push_symbol(self, symbol: Symbol) -> VMWriter:
-        """ Writes command to push a symbol(analyzed identifier) to the top of
-            the stack.
-            NOTE: Requires the 'this' segment to be properly anchored to the
-                  current class
-            """
-        self.write_push(Segment.from_kind(symbol.kind), symbol.index)
-        return self
-
-    def write_pop_to_symbol(self, symbol: Symbol) -> VMWriter:
-        """ Writes a command to pop the value at the top of the stack, to the
-            place occupied by given symbol. """
-        self.write_pop(Segment.from_kind(symbol.kind), symbol.index)
         return self
 

@@ -1,11 +1,12 @@
 from xml.etree.ElementTree import TreeBuilder, Element
-from util import write_xml_file
-from typing import Any
-from functools import wraps
+from util import xml_to_string
+
 
 class XmlWriter:
-    """ Class responsible for writing an .xml file procedurally """
-    def __init__(self):
+    """ Class responsible for writing an .xml file procedurally
+        :param path: Output .xml file path """
+    def __init__(self, path: str):
+        self.__path = path
         self.__builder = TreeBuilder()
 
     def reset(self):
@@ -17,11 +18,12 @@ class XmlWriter:
             object """
         return self.__builder.close()
 
-    def flush_to_disk(self, jack_path: str):
-        """ Closes the writer, and flushes its contents to an .xml file
-            alongside the jack file """
+    def write_to_disk(self):
+        """ Closes the writer, and flushes its contents to the .xml file """
         element = self.flush_to_element()
-        write_xml_file(element, jack_path, "")
+        xml_st = xml_to_string(element)
+        with open(self.__path, 'w') as file:
+            file.write(xml_st)
 
     def open_tag(self, tag_name: str):
         """ Opens an XML tag """
