@@ -5,11 +5,14 @@ from typing import List, Union, Any, Optional, Tuple, TypeVar, Iterator
 from symbol_table import Kind
 from vm_writer import Operator
 from enum import Enum
+from util import dataclass_to_json_string
 
 
 @dataclass
 class Token:
-    """ A token - a terminal nodes in the parse tree.  """
+    """ A token is the basic block of the program's structure. It is emitted
+        by the Tokenizer and is converted to more useful semantic objects by
+        the parser."""
     type: str
     contents: Union[str, int]  # int for an integerConstant, string otherwise
     file_pos: int  # used for error reporting, token's position(index) in file
@@ -20,18 +23,18 @@ class Semantic(ABC):
         essential information for compilation, presented in a type-safe manner
         alongside various enums. It can also define various methods to be used
         for compilation.
+
+        Not all of the object's fields are necessarily populated by JackParser,
+        some are updated in a second pass by JackCompiler.
         """
 
-
-@dataclass
-class ClassVariableDeclaration:
-    name: str
-    type: str
-    kind: Kind  # must be static or field
+    def __repr__(self):
+        return dataclass_to_json_string(self)
 
 
 @dataclass
-class Class:
+class Class(Semantic):
+    """ A class, this is the root of the parse tree"""
     class_name: str
     variable_declarations: List[ClassVariableDeclaration]
     subroutines: List[Subroutine]
@@ -42,6 +45,14 @@ class Class:
             this class in the heap """
         return sum(1 for decl in self.variable_declarations
                    if decl.kind is Kind.Field)
+
+
+@dataclass
+class ClassVariableDeclaration(Semantic):
+    """ A class variable declaration, used for creation of a symbol table """
+    name: str
+    type: str
+    kind: Kind  # must be static or field
 
 
 class SubroutineType(str, Enum):
@@ -68,11 +79,12 @@ class SubroutineType(str, Enum):
 
 @dataclass
 class Subroutine:
+    """ A subroutine (a method, constructor or function)"""
     subroutine_type: SubroutineType
     class_name: str
     name: str
     arguments: List[SubroutineArgument]
-    return_type: Optional[str]
+    return_type: Optional[str]  # None for void functions
     body: SubroutineBody
 
     @property
@@ -88,6 +100,8 @@ class SubroutineBody:
 
 @dataclass
 class SubroutineVariableDeclaration:
+    """ A subroutine variable declaration(of 'Var' kind), used to populate the
+        the function-scope symbol table """
     name: str
     type: str
     kind: Kind  # must be var or arg
@@ -95,6 +109,8 @@ class SubroutineVariableDeclaration:
 
 @dataclass
 class SubroutineArgument:
+    """ A subroutine argument declaration(of 'Arg' kind), used to populate
+        the function-scope symbol table """
     name: str
     type: str
 
@@ -107,12 +123,12 @@ class Statement(Semantic):
 @dataclass
 class LetStatement(Statement):
     var_name: str
-    var_index_expr: Optional[Expression]
+    arr_setter_expr: Optional[Expression]
     assignment: Expression
 
     def __repr__(self):
-        if self.var_index_expr:
-            return f"let {self.var_name}[{self.var_index_expr}] = {self.assignment}"
+        if self.arr_setter_expr:
+            return f"let {self.var_name}[{self.arr_setter_expr}] = {self.assignment}"
         return f"let {self.var_name} = {self.assignment}"
 
 
@@ -222,8 +238,11 @@ class Parentheses(Term):
 
 @dataclass
 class SubroutineCall(Term):
+    """ A subroutine call. This type is also updated by the JackCompiler """
 
-    # determined at parse time, the part before the dot
+    # determined at parse time - it is the part before the dot(class identifier
+    # in case of static calls, or the invoker/the 'this' parameter of the
+    # method)
     # it is None for local method calls
     subroutine_class_or_self: Optional[str]
 
@@ -261,6 +280,7 @@ class SubroutineCall(Term):
         if self.subroutine_class_or_self:
             name = f"{self.subroutine_class_or_self}.{self.subroutine_name}"
         return f"{name}({args})"
+
 
 @dataclass
 class Expression(Semantic):

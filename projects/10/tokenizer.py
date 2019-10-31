@@ -3,6 +3,7 @@ import re
 from typing import Iterator
 from jack_types import Token
 
+
 class Tokenizer:
     """ Responsible for converting a .jack file to a list of tokens """
     KEYWORDS = ['class', 'constructor', 'function', 'method', 'field',

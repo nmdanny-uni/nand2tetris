@@ -3,9 +3,6 @@ from jack_types import *
 from vm_writer import *
 from symbol_table import *
 from util import dataclass_to_json_string
-import logging
-from dataclasses import dataclass, asdict
-
 
 
 class JackCompiler:
@@ -20,7 +17,7 @@ class JackCompiler:
         self.__label_count = {}
 
     def gen_label(self, prefix: str = "") -> str:
-        """ Generates a new label """
+        """ Generates a new label for the current subroutine """
         label_ix = self.__label_count.get(prefix, 0)
         self.__label_count[prefix] = label_ix + 1
         return f"{prefix}{label_ix}"
@@ -38,8 +35,6 @@ class JackCompiler:
             self.compile_subroutine(subroutine)
 
     def compile_subroutine(self, subroutine: Subroutine):
-        # reset labels for better readability within subroutines
-
         self.__label_count.clear()
         self.__symbol_table.start_subroutine()
 
@@ -64,10 +59,7 @@ class JackCompiler:
                 kind=var.kind
             )
 
-
         # writing the function's body
-        num_args = len(subroutine.arguments) + (1 if subroutine.subroutine_type
-                                                is SubroutineType.Method else 0)
         num_locals = sum(1 for arg in subroutine.body.variable_declarations
                          if arg.kind is Kind.Var)
         self.__writer.write_function(subroutine.canonical_name, num_locals)
@@ -91,8 +83,9 @@ class JackCompiler:
                                        sym_type=self.__class.class_name,
                                        kind=Kind.Field)
 
-
-        self.__writer.write_comment(f"Symbol tables for {subroutine.canonical_name}:\n{self.__symbol_table}\n")
+        self.__writer.write_comment(f"Symbol tables for "
+                                    f"{subroutine.canonical_name}:\n"
+                                    f"{self.__symbol_table}\n")
         for statement in subroutine.body.statements:
             self.compile_statement(statement)
 
@@ -125,6 +118,8 @@ class JackCompiler:
 
 
     def __debug_comment_operation(self, semantic: Semantic):
+        """ Writes debug information about the object being compiled to
+            a comment. (Only while in debug mode) """
         self.__writer.write_comment(f"compiling {type(semantic)}:")
         self.__writer.write_multiline_comment(
             dataclass_to_json_string(semantic))
@@ -132,10 +127,12 @@ class JackCompiler:
         self.__writer.write_comment(repr(semantic))
 
     def compile_statements(self, statements: List[Statement]):
+        """ Compiles a list of statements"""
         for statement in statements:
             self.compile_statement(statement)
 
     def compile_statement(self, statement: Statement):
+        """ Compiles a statement """
         self.__debug_comment_operation(statement)
         if isinstance(statement, IfStatement):
             self.compile_if_statement(statement)
@@ -151,6 +148,7 @@ class JackCompiler:
             raise ValueError("Impossible/I forgot a statement?")
 
     def compile_if_statement(self, statement: IfStatement):
+        """ Compiles an if (else) statement """
         # generation of labels
         at_end_of_statement = self.gen_label("IF_END")
         condition_failed = at_end_of_statement
@@ -177,11 +175,13 @@ class JackCompiler:
         self.__writer.write_label(at_end_of_statement)
 
     def compile_do_statement(self, statement: DoStatement):
+        """ Compiles a 'do' statement """
         self.compile_subroutine_call(statement.call)
         # ignore the returned value by dumping it to temp segment
         self.__writer.write_pop(Segment.Temp, 0)
 
     def compile_while_statement(self, statement: WhileStatement):
+        """ Compiles a 'while' statement """
         loop_condition_check = self.gen_label("WHILE_EXP")
         after_loop = self.gen_label("WHILE_END")
 
@@ -198,12 +198,12 @@ class JackCompiler:
         self.__writer.write_label(after_loop)
 
     def compile_let_statement(self, statement: LetStatement):
-        # raise NotImplementedError("Let statement")
+        """ Compiles a let statement """
         assignee = self.__symbol_table[statement.var_name]
         if not assignee:
             raise ValueError(f"Cant perform let on undeclared variable")
-        if statement.var_index_expr is not None:
-            self.compile_expression(statement.var_index_expr)
+        if statement.arr_setter_expr is not None:
+            self.compile_expression(statement.arr_setter_expr)
             self.__writer.write_push_symbol(assignee)
             self.__writer.write_arithmetic(Operator.Add)
             # head of stack contains &arr[index_expr]
@@ -225,6 +225,7 @@ class JackCompiler:
             self.__writer.write_pop_to_symbol(assignee)
 
     def compile_return_statement(self, statement: ReturnStatement):
+        """ Yet another unnecessary docstring """
         if statement.return_expr is not None:
             self.compile_expression(statement.return_expr)
         else:
@@ -268,7 +269,9 @@ class JackCompiler:
     }
 
     def compile_expression(self, expr: Union[Expression, Term]):
-        """ Compiles an expression(or delegates compilation of a term) """
+        """ Recursive function for compiling an expression/term. This has the
+            contract of ending with the expression's result at the head of the
+            stack """
         self.__debug_comment_operation(expr)
 
         if isinstance(expr, Term):
@@ -282,8 +285,8 @@ class JackCompiler:
             assert isinstance(expr.elements[0], Term)
             assert isinstance(expr.elements[2], Term)
 
-            # convert everything to the right of the operator to an expression,
-            # so we'll be able to handle it recursively
+            # convert everything to the right of the operator to an expression
+            # object so we'll be able to handle it recursively
             right_expr = Expression(elements=expr.elements[2:])
 
             self.compile_expression(expr.elements[0])

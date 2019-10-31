@@ -1,9 +1,9 @@
-
+""" Entry point to the program """
 import argparse
 import logging
 from pathlib import Path
 
-from compilation_engine import CompilationEngine
+from jack_parser import JackParser
 from jack_compiler import JackCompiler
 from tokenizer import Tokenizer
 from xml_writer import XmlWriter
@@ -33,7 +33,7 @@ class JackAnalyzer:
         tokenizer = Tokenizer(jack_file)
         xml_writer = XmlWriter(change_extension(jack_file, "xml"))
         tokens = list(tokenizer.iter_tokens())
-        engine = CompilationEngine(tokens, xml_writer)
+        engine = JackParser(tokens, xml_writer)
 
         clazz = engine.parse_class()
 
@@ -67,7 +67,6 @@ def main():
     argparser.add_argument(
         'input',
         help='A .jack file, or a directory with .jack files')
-
 
     # ignored when not in verbose mode (so they won't bother any auto-testers)
     # in this mode, .xml and .json is always emitted, regardless of the compile

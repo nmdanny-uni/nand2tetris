@@ -1,5 +1,5 @@
 from jack_types import *
-from compilation_engine import CompilationEngine
+from jack_parser import JackParser
 from jack_compiler import JackCompiler
 import tempfile
 from typing import Callable, Any, Tuple
@@ -10,12 +10,12 @@ import pytest
 
 
 def string_to_semantic(s: str,
-                       parse_fun: Callable[[CompilationEngine], Semantic]) -> Tuple[Semantic, JackCompiler]:
+                       parse_fun: Callable[[JackParser], Semantic]) -> Tuple[Semantic, JackCompiler]:
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',
                                      suffix='.jack') as file:
         file.write(s)
         file.flush()
-        engine = CompilationEngine(file.name)
+        engine = JackParser(file.name)
         compiler = JackCompiler(file.name, Class(
             class_name="TEMP",
             class_file_path=file.name,
@@ -30,7 +30,7 @@ def print_semantic(obj: Semantic):
 def test_can_handle_ast():
     print()
     exp, comp = string_to_semantic("1 * 2 + 3 / (4 * 5) + arr[5] + -1 & ~5",
-                              CompilationEngine.parse_expression)
+                                   JackParser.parse_expression)
 
     comp.compile_expression(exp)
 

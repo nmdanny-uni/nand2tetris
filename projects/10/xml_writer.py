@@ -48,7 +48,7 @@ def with_xml_tag(tag_name: str):
         def wrapped_parse_function(*args, **kwargs):
             self = args[0]
             # TODO cleaner way to do this?
-            writer: XmlWriter = getattr(self, '_CompilationEngine__xml_writer')
+            writer: XmlWriter = getattr(self, '_JackParser__xml_writer')
             writer.open_tag(tag_name)
             ret_type = function(*args, **kwargs)
             writer.close_tag(tag_name)

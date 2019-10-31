@@ -1,19 +1,12 @@
 from typing import Optional, NamedTuple, Iterator, List, Dict, Union
-from xml.etree import ElementTree as ET
-import logging
-import dataclasses
-import json
-import util
 from jack_types import *
-from tokenizer import Tokenizer
 from symbol_table import *
 from xml_writer import XmlWriter, with_xml_tag
-from jack_compiler import JackCompiler
 
-class CompilationEngine:
-    """ Responsible for parsing a single jack file, converting it to
-        semantic objects and then compiling them via JackCompiler.
-    """
+
+class JackParser:
+    """ Responsible for parsing a single jack file and creating semantic
+        objects. """
 
     BUILT_IN_TYPES = ["int", "char", "boolean"]
     OPERATORS = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
@@ -76,7 +69,7 @@ class CompilationEngine:
             a valid class)
             May optionally accept the void keyword as-well, which is appropriate
             for function return type. """
-        token = self.eat_optional("keyword", *CompilationEngine.BUILT_IN_TYPES)
+        token = self.eat_optional("keyword", *JackParser.BUILT_IN_TYPES)
         if include_void and not token:
             token = self.eat_optional("keyword", "void")
         if not token:
@@ -288,7 +281,7 @@ class CompilationEngine:
         assignment_expr = self.parse_expression()
         self.eat("symbol", ";")
         return LetStatement(var_name=var_name.contents,
-                            var_index_expr=var_index_expr,
+                            arr_setter_expr=var_index_expr,
                             assignment=assignment_expr)
 
     @with_xml_tag("whileStatement")
@@ -337,8 +330,8 @@ class CompilationEngine:
     def parse_expression(self) -> Expression:
         expr = Expression(elements=[])
         expr.elements.append(self.parse_term())
-        while self.matches("symbol", *CompilationEngine.OPERATORS):
-            operator = self.eat("symbol", *CompilationEngine.OPERATORS)
+        while self.matches("symbol", *JackParser.OPERATORS):
+            operator = self.eat("symbol", *JackParser.OPERATORS)
             operator_typed = Operator.from_symbol(operator.contents,
                                                   unary=False)
             term = self.parse_term()
@@ -356,7 +349,7 @@ class CompilationEngine:
         if token:
             return StringConstant(token.contents)
 
-        token = self.eat_optional("keyword", *CompilationEngine.KEYWORD_CONSTANTS)
+        token = self.eat_optional("keyword", *JackParser.KEYWORD_CONSTANTS)
         if token:
             return KeywordConstant(token.contents)
 
@@ -367,9 +360,9 @@ class CompilationEngine:
             self.eat("symbol", ")")
             return Parentheses(expr=expr)
 
-        if self.matches("symbol", *CompilationEngine.UNARY_OPERATORS):
+        if self.matches("symbol", *JackParser.UNARY_OPERATORS):
             # we have a unary operation
-            unary_op = self.eat("symbol", *CompilationEngine.UNARY_OPERATORS)
+            unary_op = self.eat("symbol", *JackParser.UNARY_OPERATORS)
             term = self.parse_term()
             return UnaryOp(operator=Operator.from_symbol(unary_op.contents,
                                                          unary=True),

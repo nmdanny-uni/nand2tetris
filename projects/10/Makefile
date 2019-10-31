@@ -12,8 +12,8 @@ all:
 	chmod a+x JackCompiler
 
 tar:
-    tar -cf project10.tar *.py README Makefile JackCompiler JackAnalyzer
-    cp project10.tar project11.tar
+	tar -cf project10.tar *.py README Makefile JackCompiler JackAnalyzer
+	cp project10.tar project11.tar
 
 test:
 	python3 -m unittest
