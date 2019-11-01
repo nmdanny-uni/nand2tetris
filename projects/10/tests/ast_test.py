@@ -10,7 +10,7 @@ import pytest
 
 
 def string_to_semantic(s: str,
-                       parse_fun: Callable[[JackParser], Semantic]) -> Tuple[Semantic, JackCompiler]:
+                       parse_fun: Callable[[JackParser], ASTNode]) -> Tuple[ASTNode, JackCompiler]:
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',
                                      suffix='.jack') as file:
         file.write(s)
@@ -24,7 +24,7 @@ def string_to_semantic(s: str,
         ))
         return parse_fun(engine), compiler
 
-def print_semantic(obj: Semantic):
+def print_semantic(obj: ASTNode):
     print("\n"+json.dumps(asdict(obj), indent=4))
 
 def test_can_handle_ast():

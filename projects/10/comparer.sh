@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-sh JackAnalyzer "$*" -c
+sh JackCompiler "$*"
 
 
 RAW_FILE=$(dirname "$1")"/"$(basename "$1" .jack)

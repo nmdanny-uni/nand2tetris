@@ -33,8 +33,8 @@ def xml_to_string(root: ET.Element) -> str:
 
 
 def dataclass_to_json_string(obj: dataclasses.dataclass) -> str:
-    """ Converts a 'dataclass' object(similar to named tuple, most semantic
-        objects created by the parser) to json, for debugging purposes """
+    """ Converts a 'dataclass' object(similar to named tuple) to json, for
+        debugging purposes """
     dic = dataclasses.asdict(obj)
     return json.dumps(dic, indent=4)
 

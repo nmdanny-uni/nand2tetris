@@ -68,14 +68,15 @@ def main():
         'input',
         help='A .jack file, or a directory with .jack files')
 
-    # ignored when not in verbose mode (so they won't bother any auto-testers)
-    # in this mode, .xml and .json is always emitted, regardless of the compile
-    # flag
+    # in this mode, .xml is always emitted, regardless of the compile
+    # flag, and extra debug info is printed in the emitted .vm files as well as
+    # standard output. (via 'logging.debug' calls)
     argparser.add_argument('-v', '--verbose',
                            action='store_true',
                            help='print debug information')
-    # basically toggles ex11,  in this mode, .xml isn't emitted UNLESS
-    # verbose flag is on.
+
+    # switches between ex10(no flag) and ex11(with flag). When on, XML isn't
+    # emitted and we also perform the compilation step.
     argparser.add_argument('-c', '--compile',
                            action='store_true',
                            help='emit .vm instead of .xml')

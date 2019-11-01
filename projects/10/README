@@ -1,0 +1,100 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
+===============================================================================
+
+                           Projects 10+11 - Jack Compiler
+                           ----------------------- 
+  
+
+Submitted Files
+
+.
+|-- JackAnalyzer          # Executable that runs ex10 version(emits .xml)
+|-- JackCompiler          # Executable that runs ex11 version(emits .vm)
+|-- Makefile              # Makefile
+|-- README                # This file
+|-- jack_parser.py        # Responsible for parsing
+|-- jack_analyzer.py      # Entry point to program
+|-- jack_compiler.py      # Responsible for compiling parsed objects
+|-- jack_types.py         # Contains many important types
+|-- symbol_table.py       # Symbol table implementation
+|-- tokenizer.py          # Responsible for tokenizing a .jack file
+|-- util.py               # Utility functions
+|-- vm_writer.py          # Responsible for emitting VM commands
+`-- xml_writer.py         # Responsible for emitting XML
+
+
+Design & Overview
+------
+The compilation process is done in several stages:
+
+JackAnalyzer is given a file/folder, for each .jack file it performs the following
+process independently of other files:
+
+1. Tokenization: the Tokenizer converts a file to a list of tokens.
+2. Parsing: the JackParser converts a list of tokens into a 'Class' object,
+            and emitting XML tags as well(if we're on ex10 mode)
+3. Compilation: the JackCompiler takes a 'Class' object and emits .VM code
+
+While it would've been possible to do steps 2,3 in a single pass(like the
+proposed implementation), splitting the work to different stages improves
+readability and ensures separation of concerns.
+
+
+Remarks & Implementation notes
+-------
+
+--- Tokenization(ex10) ---
+Tokenization is done via a regex that matches each token. This regex composed
+from several smaller regexes for each token type.
+
+--- Parsing(ex10) ---
+The parser is implemented via recursive descent, there are several key methods
+in the parser:
+
+* matches: This peeks at the current token and returns it only if it matches
+           the conditions passed via parameter (that specify the expected token
+           type and several possible content values, if at all)
+
+* eat_optional: Like the above, but also advances to the next token if the
+                match succeeds
+
+* eat: Like the above, but raises an error if the match fails.
+
+Most of the parsing methods correspond to different parts of the jack grammar,
+in cases where we have choice - we usually use 'matches' to determine which
+sub-parser to invoke, and once that parser is invoked, it eats the token that
+was previously matched, and continues to parse the relevant elements.
+
+The parsing methods return various objects which contain fields
+relevant for compilation, without extra cruft such as parentheses etc, and
+usually typed(e.g, using 'Operator' and 'Kind' enums rather than raw strings)
+
+In addition, if we are on ex10 mode (the 'c' flag isn't passed), XML tags
+are outputted via 'XmlWriter'
+
+--- XML writing ---
+The XmlWriter class wraps Python's built in xml.etree.ElementTree library
+which allows creating the XML in a procedural style via 'TreeBuilder'.
+Leaf XML nodes are written for tokens, within the 'eat_optional' method of the
+parser, whereas non-terminal nodes are written at the start and end of parsing
+methods. (This was done via the "with_xml_tag" decorator, so parsing functions
+remain clean and separate from xml-writing concerns)
+
+--- Compilation(ex11) ---
+The JackCompiler is the final step in the program, recursively emitting VM
+instructions via 'VMWriter'. There's usually a bit of semantic analysis prior
+to emitting commands, mostly updating the symbol table when entering a class or
+a subroutine, as well as analyzing subroutine calls(which requires knowledge of
+the symbol table).
+
+--- VM writing ---
+The VMWriter class is similar to the proposed implementation, but with some
+extra functionality, for instance, writing string constants, converting some
+operators to OS calls and writing debug comments.
+
+
+
+
+

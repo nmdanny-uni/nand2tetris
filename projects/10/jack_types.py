@@ -9,8 +9,8 @@ from util import dataclass_to_json_string
 @dataclass
 class Token:
     """ A token is the basic block of the program's structure. It is emitted
-        by the Tokenizer and is converted to more useful semantic objects by
-        the parser."""
+        by the Tokenizer and is used to construct AST nodes during parsing.
+    """
     type: str
     contents: Union[str, int]  # int for an integerConstant, string otherwise
 
@@ -46,8 +46,8 @@ class Symbol:
     index: int
 
 
-class Semantic(ABC):
-    """ A semantic object is a node in the program's parse tree consisting of
+class ASTNode(ABC):
+    """ Represents a node in in the program's parse tree consisting of
         essential information for compilation, presented in a type-safe manner
         alongside various enums. It can also define various methods to be used
         for compilation.
@@ -61,7 +61,7 @@ class Semantic(ABC):
 
 
 @dataclass
-class Class(Semantic):
+class Class(ASTNode):
     """ A class, this is the root of the parse tree"""
     class_name: str
     variable_declarations: List[ClassVariableDeclaration]
@@ -76,7 +76,7 @@ class Class(Semantic):
 
 
 @dataclass
-class ClassVariableDeclaration(Semantic):
+class ClassVariableDeclaration(ASTNode):
     """ A class variable declaration, used for creation of a symbol table """
     name: str
     type: str
@@ -144,7 +144,7 @@ class SubroutineArgument:
 
 
 @dataclass
-class Statement(Semantic):
+class Statement(ASTNode):
     pass
 
 
@@ -202,7 +202,7 @@ class ReturnStatement(Statement):
 
 
 @dataclass
-class Term(Semantic):
+class Term(ASTNode):
     pass
 
 
@@ -311,7 +311,7 @@ class SubroutineCall(Term):
 
 
 @dataclass
-class Expression(Semantic):
+class Expression(ASTNode):
     """ A parsed expression is a list of terms joined by operators. """
     elements: List[Union[Operator, Term]]
 

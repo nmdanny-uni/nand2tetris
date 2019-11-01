@@ -5,8 +5,8 @@ from vm_writer import Kind
 
 
 class JackParser:
-    """ Responsible for parsing a single jack file and creating semantic
-        objects. """
+    """ Responsible for parsing a single jack file and creating objects for
+        different grammar. """
 
     BUILT_IN_TYPES = ["int", "char", "boolean"]
     OPERATORS = ["+", "-", "*", "/", "&", "|", "<", ">", "="]

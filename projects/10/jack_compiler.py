@@ -1,3 +1,4 @@
+""" (Ex11) implementation of the compiler """
 from __future__ import annotations
 from jack_types import *
 from vm_writer import *
@@ -7,7 +8,7 @@ from util import dataclass_to_json_string
 
 class JackCompiler:
     """ Responsible for compiling a .jack source file, by recursively
-        analyzing a Class object """
+        analyzing a Class object and emitting VM instructions. """
     def __init__(self, vm_writer: VMWriter, clazz: Class):
         """ Initializes the compiler for a given path and a fully parsed
             class """
@@ -36,9 +37,9 @@ class JackCompiler:
 
     def compile_subroutine(self, subroutine: Subroutine):
         self.__label_count.clear()
-        self.__symbol_table.start_subroutine()
 
         # first step, updating symbol table
+        self.__symbol_table.start_subroutine()
         if subroutine.subroutine_type == SubroutineType.Method:
             self.__symbol_table.define(
                 name="this",
@@ -115,16 +116,14 @@ class JackCompiler:
                 call.subroutine_class = call.subroutine_class_or_self
                 call.call_type = SubroutineType.Function
 
-
-
-    def __debug_comment_operation(self, semantic: Semantic):
+    def __debug_comment_operation(self, node: ASTNode):
         """ Writes debug information about the object being compiled to
             a comment. (Only while in debug mode) """
-        self.__writer.write_comment(f"compiling {type(semantic)}:")
+        self.__writer.write_comment(f"compiling {type(node)}:")
         self.__writer.write_multiline_comment(
-            dataclass_to_json_string(semantic))
+            dataclass_to_json_string(node))
         self.__writer.write_comment('')
-        self.__writer.write_comment(repr(semantic))
+        self.__writer.write_comment(repr(node))
 
     def compile_statements(self, statements: List[Statement]):
         """ Compiles a list of statements"""
