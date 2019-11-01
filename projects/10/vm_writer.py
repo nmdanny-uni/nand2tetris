@@ -1,10 +1,8 @@
 from __future__ import annotations
 from typing import List, Optional, Iterable, Union
 from enum import Enum
-from dataclasses import dataclass
 import logging
-from pathlib import Path
-from symbol_table import Symbol, Kind
+from jack_types import Kind, Operator, Symbol
 
 
 class Segment(str, Enum):
@@ -34,68 +32,6 @@ class Segment(str, Enum):
         raise ValueError(f"Unsupported kind {kind}")
 
 
-class Operator(str, Enum):
-    """ A unary/binary operator, which might or might not need special OS
-        support. """
-
-    # Strings below are only used for debugging purposes
-    Add = "+",
-    Sub = "-",
-    Neg = "neg-",
-    Eq = "=",
-    Gt = ">",
-    Lt = "<",
-    And = "&",
-    Or = "|",
-    Not = "~",
-    # the following use OS implementation
-    Mul = "*",
-    Div = "/"
-
-    def __repr__(self):
-        return self.value
-
-    @property
-    def num_args(self) -> int:
-        """ Returns the number of arguments used by this operator """
-        if self in [Operator.Neg, Operator.Not]:
-            return 1
-        return 2
-
-
-    @staticmethod
-    def from_symbol(symbol: str, unary: bool) -> Operator:
-        """ Converts a string symbol into an operator
-            A 'unary' flag may be passed to signify that this is a unary
-            operator (to differ between 'neg' and 'sub')
-        """
-        if unary:
-            return ST_TO_UNARY_OPERATOR[symbol]
-        else:
-            return ST_TO_BINARY_OPERATOR[symbol]
-
-
-OPERATOR_TO_OS_CALL = {
-    Operator.Mul: "Math.multiply",
-    Operator.Div: "Math.divide"
-}
-
-ST_TO_BINARY_OPERATOR = {
-    "+": Operator.Add,
-    "-": Operator.Sub,
-    "=": Operator.Eq,
-    ">": Operator.Gt,
-    "<": Operator.Lt,
-    "&": Operator.And,
-    "|": Operator.Or,
-    "*": Operator.Mul,
-    "/": Operator.Div
-}
-
-ST_TO_UNARY_OPERATOR = {
-    "-": Operator.Neg,
-    "~": Operator.Not
-}
 
 class VMWriter:
     """ Emits VM instructions to a .vm file
@@ -172,9 +108,9 @@ class VMWriter:
 
     def write_arithmetic(self, operator: Operator) -> VMWriter:
         """ Writes a VM arithmetic command"""
-        if operator in OPERATOR_TO_OS_CALL:
-            os_call = OPERATOR_TO_OS_CALL[operator]
-            self.write_call(os_call, 2)
+        os_call = operator.as_os_call()
+        if os_call:
+            self.write_call(os_call, operator.num_args)
         else:
             self.__write_line(f"{operator.name.lower()}")
         return self

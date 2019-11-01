@@ -59,5 +59,5 @@ class Tokenizer:
                     token_type = "keyword"
                 else:
                     token_type = "identifier"
-            yield Token(token_type, contents, match.start())
+            yield Token(token_type, contents)
 

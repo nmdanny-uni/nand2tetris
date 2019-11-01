@@ -2,8 +2,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Union, Any, Optional, Tuple, TypeVar, Iterator
-from symbol_table import Kind
-from vm_writer import Operator
 from enum import Enum
 from util import dataclass_to_json_string
 
@@ -15,7 +13,37 @@ class Token:
         the parser."""
     type: str
     contents: Union[str, int]  # int for an integerConstant, string otherwise
-    file_pos: int  # used for error reporting, token's position(index) in file
+
+
+class Kind(str, Enum):
+    """ Represents the kind of a symbol """
+    Static = "static"
+    Field = "field"
+    Arg = "arg"
+    Var = "var"
+
+    @staticmethod
+    def from_str(s: str) -> Kind:
+        if s == "static":
+            return Kind.Static
+        if s == "field":
+            return Kind.Field
+        if s == "arg":
+            return Kind.Arg
+        if s == "var":
+            return Kind.Var
+        raise ValueError(f"Unknown variable kind \"{s}\"")
+
+
+@dataclass(frozen=True)
+class Symbol:
+    """ Represents a symbol in a symbol table
+        It is immutable.
+    """
+    name: str
+    type: str
+    kind: Kind
+    index: int
 
 
 class Semantic(ABC):
@@ -290,3 +318,68 @@ class Expression(Semantic):
     def __repr__(self):
         return "".join(repr(elm) for elm in self.elements)
 
+
+class Operator(str, Enum):
+    """ A unary/binary operator, which might or might not need special OS
+        support. """
+
+    # Strings below are only used for debugging purposes
+    Add = " + ",
+    Sub = " - ",
+    Neg = "-",
+    Eq = " = ",
+    Gt = " > ",
+    Lt = " < ",
+    And = " & ",
+    Or = " | ",
+    Not = "~",
+    # the following use OS implementation
+    Mul = "*",
+    Div = "/"
+
+    def __repr__(self):
+        return self.value
+
+    @property
+    def num_args(self) -> int:
+        """ Returns the number of arguments used by this operator """
+        if self in [Operator.Neg, Operator.Not]:
+            return 1
+        return 2
+
+    @staticmethod
+    def from_symbol(symbol: str, unary: bool) -> Operator:
+        """ Converts a string symbol into an operator
+            A 'unary' flag may be passed to signify that this is a unary
+            operator (to differ between 'neg' and 'sub')
+        """
+        if unary:
+            return ST_TO_UNARY_OPERATOR[symbol]
+        else:
+            return ST_TO_BINARY_OPERATOR[symbol]
+
+    def as_os_call(self) -> Optional[str]:
+        """ If the given operator is implemented via OS calls, returns the
+            name of the OS routine used for it """
+        if self is Operator.Mul:
+            return "Math.multiply"
+        if self is Operator.Div:
+            return "Math.divide"
+
+
+ST_TO_BINARY_OPERATOR = {
+    "+": Operator.Add,
+    "-": Operator.Sub,
+    "=": Operator.Eq,
+    ">": Operator.Gt,
+    "<": Operator.Lt,
+    "&": Operator.And,
+    "|": Operator.Or,
+    "*": Operator.Mul,
+    "/": Operator.Div
+}
+
+ST_TO_UNARY_OPERATOR = {
+    "-": Operator.Neg,
+    "~": Operator.Not
+}

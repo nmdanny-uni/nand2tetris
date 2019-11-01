@@ -1,7 +1,7 @@
-from typing import Optional, NamedTuple, Iterator, List, Dict, Union
 from jack_types import *
 from symbol_table import *
 from xml_writer import XmlWriter, with_xml_tag
+from vm_writer import Kind
 
 
 class JackParser:

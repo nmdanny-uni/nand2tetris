@@ -1,46 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from enum import Enum
+from dataclasses import asdict
 from typing import Dict, Optional
-import pandas
-
-
-class Kind(str, Enum):
-    """ Represents the kind of a symbol """
-    Static = "static"
-    Field = "field"
-    Arg = "arg"
-    Var = "var"
-
-    @staticmethod
-    def from_str(s: str) -> Kind:
-        if s == "static":
-            return Kind.Static
-        if s == "field":
-            return Kind.Field
-        if s == "arg":
-            return Kind.Arg
-        if s == "var":
-            return Kind.Var
-        raise ValueError(f"Unknown variable kind \"{s}\"")
-
-
-class Scope(str, Enum):
-    """ Represents the scope of a symbol"""
-    Class = "class"
-    Subroutine = "Subroutine"
-
-
-@dataclass(frozen=True)
-class Symbol:
-    """ Represents a symbol in a symbol table
-        It is immutable.
-    """
-    name: str
-    type: str
-    kind: Kind
-    index: int
-
+from jack_types import Symbol, Kind
+import json
 
 
 class SymbolTable:
@@ -81,16 +43,13 @@ class SymbolTable:
         table = self.__get_table_for_kind(kind)
         return sum(1 for symbol in table.values() if symbol.kind is kind)
 
-    def get_scope(self, symbol: Symbol) -> Scope:
-        """ Gets the scope of a variable """
-        if symbol.name in self.__func_table:
-            return Scope.Subroutine
-        elif symbol.name in self.__class_table:
-            return Scope.Class
-        raise ValueError(f"Symbol \"{symbol}\" is invalid, doesn't belong to"
-                         f"any scope")
-
     def __repr__(self):
+        """ Displays the symbols table(if pandas is installed, draws a nice
+            table)"""
+        try:
+            import pandas
+        except ImportError:
+            return json.dumps(vars(self))
         class_symbols = [asdict(symbol) for symbol
                          in self.__class_table.values()]
         func_symbols = [asdict(symbol) for symbol

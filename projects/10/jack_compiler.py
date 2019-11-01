@@ -306,13 +306,7 @@ class JackCompiler:
         elif isinstance(term, IntegerConstant):
             self.__writer.write_push(Segment.Const, term.value)
         elif isinstance(term, KeywordConstant):
-            if term.value == "this":
-                self.__writer.write_push(Segment.Pointer, 0)
-            else:
-                num_value = JackCompiler.KEYWORD_TO_CONST[term.value]
-                self.__writer.write_push(Segment.Const, abs(num_value))
-                if num_value < 0:
-                    self.__writer.write_arithmetic(Operator.Neg)
+            self.compile_keyword_constant(term)
         elif isinstance(term, Identifier):
             sym = self.__symbol_table[term.name]
             if not sym:
@@ -320,20 +314,34 @@ class JackCompiler:
                                  f"identifier \"{term.name}\"")
             self.__writer.write_push_symbol(sym)
         elif isinstance(term, ArrayIndexer):
-            sym = self.__symbol_table[term.array_var]
-            if not sym:
-                raise ValueError(f"Expression contains unresolved array "
-                                 f"identifier \"{term.array_var}\"")
-            self.compile_expression(term.index_expr)
-            self.__writer.write_push_symbol(sym)
-            self.__writer.write_arithmetic(Operator.Add)
-            self.__writer.write_pop(Segment.Pointer, 1)
-            self.__writer.write_push(Segment.That, 0)
+            self.compile_array_index_term(term)
         elif isinstance(term, StringConstant):
             self.__writer.write_push_string(term.value)
         elif isinstance(term, SubroutineCall):
             self.compile_subroutine_call(term)
         else:
             raise NotImplementedError(f"TODO impl compile term of type {type(term)}")
+
+    def compile_keyword_constant(self, term: KeywordConstant):
+        """ Compiles a keyword constant """
+        if term.value == "this":
+            self.__writer.write_push(Segment.Pointer, 0)
+        else:
+            num_value = JackCompiler.KEYWORD_TO_CONST[term.value]
+            self.__writer.write_push(Segment.Const, abs(num_value))
+            if num_value < 0:
+                self.__writer.write_arithmetic(Operator.Neg)
+
+    def compile_array_index_term(self, term: ArrayIndexer):
+        """ Compiles an array indexing term """
+        sym = self.__symbol_table[term.array_var]
+        if not sym:
+            raise ValueError(f"Expression contains unresolved array "
+                             f"identifier \"{term.array_var}\"")
+        self.compile_expression(term.index_expr)
+        self.__writer.write_push_symbol(sym)
+        self.__writer.write_arithmetic(Operator.Add)
+        self.__writer.write_pop(Segment.Pointer, 1)
+        self.__writer.write_push(Segment.That, 0)
 
 
