@@ -24,21 +24,21 @@ CHIP Mul{
     PARTS:
 
     // we use aS# to represent a, left shifted # units.
-    ShiftLeft(in=a, out=aS1);
-    ShiftLeft(in=aS1, out=aS2);
-    ShiftLeft(in=aS2, out=aS3);
-    ShiftLeft(in=aS3, out=aS4);
-    ShiftLeft(in=aS4, out=aS5);
-    ShiftLeft(in=aS5, out=aS6);
-    ShiftLeft(in=aS6, out=aS7);
-    ShiftLeft(in=aS7, out=aS8);
-    ShiftLeft(in=aS8, out=aS9);
-    ShiftLeft(in=aS9, out=aS10);
-    ShiftLeft(in=aS10, out=aS11);
-    ShiftLeft(in=aS11, out=aS12);
-    ShiftLeft(in=aS12, out=aS13);
-    ShiftLeft(in=aS13, out=aS14);
-    ShiftLeft(in=aS14, out=aS15);
+    LogicalShiftLeft(in=a, out=aS1);
+    LogicalShiftLeft(in=aS1, out=aS2);
+    LogicalShiftLeft(in=aS2, out=aS3);
+    LogicalShiftLeft(in=aS3, out=aS4);
+    LogicalShiftLeft(in=aS4, out=aS5);
+    LogicalShiftLeft(in=aS5, out=aS6);
+    LogicalShiftLeft(in=aS6, out=aS7);
+    LogicalShiftLeft(in=aS7, out=aS8);
+    LogicalShiftLeft(in=aS8, out=aS9);
+    LogicalShiftLeft(in=aS9, out=aS10);
+    LogicalShiftLeft(in=aS10, out=aS11);
+    LogicalShiftLeft(in=aS11, out=aS12);
+    LogicalShiftLeft(in=aS12, out=aS13);
+    LogicalShiftLeft(in=aS13, out=aS14);
+    LogicalShiftLeft(in=aS14, out=aS15);
 
     // we use p# to represent the shifted partial product of the #'th digit.
     Mux16(a=false, b=a, sel=b[0], out=p0);

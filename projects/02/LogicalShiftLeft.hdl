@@ -1,15 +1,10 @@
 /** out = in * 2
-  * This is done by shifting all bits to the left.
-  * Basically, the 0th output pin is 0, out[1] equals in[0], out[2] equals in[1] and so on...
-  * Since HDL doesn't let us connect input pins to output pins directly, we need to use double
-  * double NOTs to get the effect of an "Identity" gate.(See Identity.hdl)
-  *
-  * Identity gate uses 2 NOTs(=NANDs), therefore we use a total of 15*2 + 1 = 31 NANDs
-  *
-  * This is an arithmetic shift, it preserves the sign bit
+  * This is a logical left shift, it will affect the sign bit too. 
+  * Although not required in the exercise, this makes it much easier to implement the Mul chip,
+  * as this magically takes care of the sign bit
   * 
   */
-CHIP ShiftLeft{
+CHIP LogicalShiftLeft{
      IN in[16];
      OUT out[16];
      PARTS:
@@ -29,6 +24,5 @@ CHIP ShiftLeft{
      Identity(in=in[11], out=out[12]);
      Identity(in=in[12], out=out[13]);
      Identity(in=in[13], out=out[14]);
-     // Unlike others, the MSB(sign bit) is unchanged as  this is an arithmetic shift
-     Identity(in=in[15], out=out[15]);
+     Identity(in=in[14], out=out[15]);
 }

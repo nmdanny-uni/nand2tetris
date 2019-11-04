@@ -2,16 +2,14 @@
   * Similar idea as with left-shift, this takes 32 NANDs but could've taken 0 gates
   * if we had the ability to connect pins directly.
   *
-  * Note: the output MSB equals the input MSB, because the shift preserves the sign, and
-  * in twos-complement, zeroing a previously 1 MSB, would turn a negative number into a positive,
-  * which isn't what we want to do here. (In other words: the MSB is the sign bit, and must be preserved)
   */
 CHIP ShiftRight{
      IN in[16];
      OUT out[16];
 
      PARTS:
-     Identity(in=in[15], out=out[15]); // right-shift always fills MSB with input MSB.
+     // The MSB(sign bit) stays as is, because this is an arithmetic shift
+     Identity(in=in[15], out=out[15]);
      Identity(in=in[15], out=out[14]);
      Identity(in=in[14], out=out[13]);
      Identity(in=in[13], out=out[12]);

@@ -9,19 +9,28 @@ Daniel Kerbel, ID ***REMOVED***, danielkerbel@mail.huji.ac.il
 
 Submitted Files
 
-- README - This file
-- Identity.hdl - Helper chip
-- FullAdder.hdl
-- HalfAdder.hdl
-- Add16.hdl
-- Inc16.hdl
-- ALU.hdl
-- ShiftLeft.hdl - Extra requirement from 2018/19 course(TODO: is it still relevant in 2020?)
-- ShiftRight.hdl - Extra requirement
-- Mul.hdl - Extra requirement
+.
+|-- Add16.hdl
+|-- ALU.hdl
+|-- FullAdder.hdl
+|-- HalfAdder.hdl
+|-- Identity.hdl         - Helper chip
+|-- Inc16.hdl
+|-- Mul.hdl
+|-- README               - This file
+|-- LogicalShiftLeft.hdl - Helper chip 
+|-- ShiftLeft.hdl
+`-- ShiftRight.hdl
 
 Remarks
 -------
+== Logical left shift cip ==
+This chip eliminates the need for special sign handling within 'Mul'. 
+Why? Because we've been instructed to ignore overflows within the 'Mul' chip - which is the natural
+behavior of a logical left shift (in contrast to the arithmetic one we've implemented, which causes
+unwanted behavior when using negative numbers in Mul)
+
+
 == Identity Helper Chip ==
 The 'Identity' chip(used within the Shift gates) is used due to the inability to connect internal
 pins directly to output pins, I think this is a limitation of HDL and thus this gate can be easily
