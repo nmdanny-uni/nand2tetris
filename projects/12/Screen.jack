@@ -11,33 +11,195 @@
  */
 class Screen {
 
+  // This array lets us calculate left-shifts of 1:
+  // 2^x == 1 << x == powersOf2[x]
+  static Array powersOf2;
+
+  // true for black, false for white
+  static boolean currentColor;
+
+
     /** Initializes the Screen. */
     function void init() {
+      let currentColor = true;
+      let powersOf2 = Array.new(16);
+      let powersOf2[0] = 1;
+      let powersOf2[1] = 2;
+      let powersOf2[2] = 4;
+      let powersOf2[3] = 8;
+      let powersOf2[4] = 16;
+      let powersOf2[5] = 32;
+      let powersOf2[6] = 64;
+      let powersOf2[7] = 128;
+      let powersOf2[8] = 256;
+      let powersOf2[9] = 512;
+      let powersOf2[10] = 1024;
+      let powersOf2[11] = 2048;
+      let powersOf2[12] = 4096;
+      let powersOf2[13] = 8192;
+      let powersOf2[14] = 16384;
+      // the following obviously isn't correct, but it's good enough for
+      // purposes of bitwise operations.
+      let powersOf2[15] = -32767 - 1;
+      return;
     }
 
     /** Erases the entire screen. */
     function void clearScreen() {
+      return;
     }
 
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
     function void setColor(boolean b) {
+      let currentColor = b;
+      return;
     }
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
+      var int offset, value, bitIx;
+      let offset = (32 * y) + (x / 16);
+      let value = Memory.peek(16384 + offset);
+      // modify the c%16 bit, we know that a % 2^4 == a && (powersOf2[4] - 1)
+      let bitIx = x & 15;
+      // if color is true: we should set the bit via `value | (1 << bitIx)`
+      // otherwise, we should clear it via `value & ~(1 << bitIx)`
+      if (currentColor) {
+        let value = value | powersOf2[bitIx];
+      } else {
+        let value = value & (~powersOf2[bitIx]);
+      }
+
+      do Memory.poke(16384 + offset, value);
+      return;
     }
 
-    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color.
+     */
     function void drawLine(int x1, int y1, int x2, int y2) {
+      var int dx, dy;
+      let dx = x2 - x1;
+      let dy = y2 - y1;
+      if ((dx = 0) | (dy = 0)) {
+        // going in a single axis
+        do Screen.drawRectangleGeneral(x1, y1, x2, y2);
+      }
+      if ((dx > 0) & (dy > 0)) {
+        // going down-right
+        do Screen.drawDownRightLine(x1, y1, x2, y2);
+      }
+      if ((dx < 0) & (dy < 0)) {
+        // going up-left, mirror case of going down-right, so we just swap coordinates
+        do Screen.drawDownRightLine(x2, y2, x1, y1);
+      }
+      if ((dx > 0) & (dy < 0)) {
+        // going up-right
+        do Screen.drawUpRightLine(x1, y1, x2, y2);
+      }
+
+      if ((dx < 0) & (dy > 0)) {
+        // going down-left, mirror case of going up-right, so we just swap coordinates
+        do Screen.drawUpRightLine(x2, y2, x1, y1);
+      }
+      return;
+    }
+
+
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color.
+     * This is for the case when going down-right (that is, dx>0 and dy>0)
+     */
+    function void drawDownRightLine(int x1, int y1, int x2, int y2) {
+      var int dx, dy, a, b, diff;
+      let dx = x2 - x1;
+      let dy = y2 - y1;
+      let a = 0; // current distance in the horizontal(x) axis
+      let b = 0; // current distance in the vertical(y) axis
+      let diff = 0;
+
+      while ((a < (dx + 1)) & (b < (dy + 1))) {
+        do Screen.drawPixel(x1 + a, y1 + b);
+        if (diff < 0) {
+          // moving in the x-axis (right)
+          let a = a + 1;
+          let diff = diff + dy;
+        } else {
+          // moving in the y-axis (down)
+          let b = b + 1;
+          let diff = diff - dx;
+        }
+      }
+      return;
+    }
+
+
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color.
+     * This is for the case when going up-right (that is, dx>0 and dy<0)
+     */
+    function void drawUpRightLine(int x1, int y1, int x2, int y2) {
+      var int dx, dy, a, b, diff;
+      let dx = x2 - x1;
+      let dy = y2 - y1;
+      let a = 0; // current distance in the horizontal(x) axis
+      let b = 0; // current distance in the vertical(y) axis
+      let diff = 0;
+
+      while ((a < (dx + 1)) & ((b+1) > dy)) {
+        do Screen.drawPixel(x1 + a, y1 + b);
+        if (diff < 0) {
+          // moving in the x-axis (right)
+          let a = a + 1;
+          let diff = diff - dy;
+        } else {
+          // moving in the y-axis (up)
+          let b = b - 1;
+          let diff = diff - dx;
+        }
+      }
+      return;
+    }
+
+    /** Similar to 'drawRectangle', but the coordinates (x1, y1) and (x2, y2)
+     *  can be in any quadrant. This doubles as a function for drawing flat lines
+     *  (when the two coordinates share an axis)
+     */
+    function void drawRectangleGeneral(int x1, int y1, int x2, int y2) {
+      var int origX, origY, tgtX, tgtY;
+      let origX = Math.min(x1, x2);
+      let tgtX = Math.max(x1, x2);
+      let origY = Math.min(y1, y2);
+      let tgtY = Math.max(y1, y2);
+      do Screen.drawRectangle(origX, origY, tgtX, tgtY);
+      return;
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
+      var int curX, curY;
+      let curX = x1;
+      // we use non-strict inequalities so that we'll be able to
+      // draw vertical/horizontal lines as well
+      while (~(curX > x2)) {
+        let curY = y1;
+        while (~(curY > y2)) {
+          do Screen.drawPixel(curX, curY);
+          let curY = curY + 1;
+        }
+        let curX = curX + 1;
+      }
+      return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
     function void drawCircle(int x, int y, int r) {
+      var int dy, sqrtTerm;
+      let dy = -r;
+      while (dy < (r + 1)) {
+        let sqrtTerm = Math.sqrt((r * r) - (dy * dy));
+        do Screen.drawRectangle(x - sqrtTerm, y + dy, x + sqrtTerm, y + dy);
+        let dy = dy + 1;
+      }
+      return;
     }
 }
