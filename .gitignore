@@ -1,5 +1,6 @@
 *.out
 *.dat
 *.hack
+*.tar
 __pycache__/
 .mypy_cache/
