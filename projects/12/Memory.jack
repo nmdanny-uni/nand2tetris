@@ -7,28 +7,110 @@
  * This library provides two services: direct access to the computer's main
  * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
  * consists of 32,768 words, each holding a 16-bit binary number.
- */ 
+ */
+
 class Memory {
+    // a pseudo-array for raw access to RAM
+    static Array ram;
+
+    // Points  towards the first free segment in the list
+    static Array freeList;
+
+    // a debug count of the number of segments
+    static int debugSegmentCount;
+
+    // segments are organized as follows:
+    //
+    // segment[0] = address of next segment, may be null
+    // segment[1] = block[-1] = size of this segment's free block
+    // segment[2] = block[0]  = beginning of free block data
+    //
+    // some insights/facts:
+    // segmentSize is blockSize + 2, this must be kept in mind when dealing
+    // with sizes.
+    //
+    // When allocating, space is carved from the bottom(creating a new segment),
+    // causing the upper space(that belongs to the fitting segment) to shrink
+
 
     /** Initializes the class. */
     function void init() {
+      let ram = 0;
+
+      let debugSegmentCount = 0;
+      let freeList = Memory.makeSegment(2048, 16383 - 2048 - 1);
+      return;
     }
 
     /** Returns the RAM value at the given address. */
     function int peek(int address) {
+      return ram[address];
     }
 
     /** Sets the RAM value at the given address to the given value. */
     function void poke(int address, int value) {
+      let ram[address] = value;
+      return;
     }
+
 
     /** Finds an available RAM block of the given size and returns
      *  a reference to its base address. */
     function int alloc(int size) {
+      // used during iteration
+      var Array bestSegment;
+      // carved out of the best segment
+      var Array newSegment;
+
+      // finding a segment via 'first fit'
+      let bestSegment = freeList;
+        while (bestSegment[1] < (size + 2)) {
+        if (bestSegment[0] = null) {
+          do Sys.error(6);
+          return null;
+        }
+        let bestSegment = bestSegment[0];
+      }
+
+      // found a fitting segment, carve a new segment/block within the free space
+      // at the bottom
+      let newSegment = Memory.makeSegment(bestSegment + ( bestSegment[1] - size ), size);
+
+      // subtract that carved space from the fitting segment
+      let bestSegment[1] = bestSegment[1] - (size + 2);
+
+      // return the block address of the new segment
+      return newSegment + 2;
+    }
+
+    /** Creates a segment of given size at given position */
+    function Array makeSegment(int pos, int size) {
+      var Array segment;
+      var int ix;
+      let segment = pos;
+      let segment[0] = null;
+      let segment[1] = size;
+      // for debugging, mark the segment's block contents
+      // TODO delete this
+      let ix = 0;
+      while (ix < size) {
+        let segment[2 + ix] = 1337 + debugSegmentCount;
+        let ix = ix + 1;
+      }
+      let debugSegmentCount = debugSegmentCount + 1;
+      return segment;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
-    }    
+      var Array deAllocedSegment, iterSegment;
+      let deAllocedSegment = o - 2;
+      let iterSegment = freeList;
+      while (~(iterSegment[0] = null)) {
+        let iterSegment = iterSegment[0];
+      }
+      let iterSegment[0] = deAllocedSegment;
+      return;
+    }
 }
