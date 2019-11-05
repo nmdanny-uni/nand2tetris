@@ -70,21 +70,14 @@ class Util {
     return (a | b) & (~(a & b));
   }
 
-  /** Returns absolute value of a */
-  function int abs(int a) {
-    if (a < 0) {
-      return -a;
-    }
-    return a;
-  }
-
   /** Generates a random number in the given range, range must
       consist of non-negative numbers only. */
   function int getNumberInRange(int start, int endExclusive) {
     var int modulus, result, randomNumber;
-    let randomNumber = Util.abs(Random.getNumber());
-    let modulus = Util.abs(Util.modulus(randomNumber, endExclusive-start));
+    let randomNumber = Math.abs(Random.getNumber());
+    let modulus = Math.abs(Util.modulus(randomNumber, endExclusive-start));
     let result = start + modulus;
+    // TODO delete this
     if ((result < start) | (result > (endExclusive - 1))) {
       do Output.printString("getNumberInRange(");
       do Output.printInt(start);
