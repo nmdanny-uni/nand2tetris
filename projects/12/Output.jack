@@ -229,6 +229,7 @@ class Output {
                                + (cursorCol/2);
         let screenValue = Memory.peek(memoryAddr);
         // determine which half of the word via cursorCol % 2
+        // (second half iff cursorCol % 2 == 1 iff cursorCol & 1 = 1)
         if (cursorCol & 1) {
           // second half (we right shift the bitmap 8 bits,
           //              achievable by multiplicating by 2^8=256)
@@ -252,12 +253,40 @@ class Output {
     /** displays the given string starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printString(String s) {
+      var int ix, length;
+      let length = s.length();
+      let ix = 0;
+      while (ix < length) {
+        do Output.printChar(s.charAt(ix));
+        let ix = ix + 1;
+      }
       return;
     }
 
     /** Displays the given integer starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printInt(int i) {
+      if (i < 0) {
+        do Output.printChar(45); // dash
+        do Output.printPositiveInt(-i);
+        return;
+      }
+      do Output.printPositiveInt(i);
+      return;
+    }
+
+    /** A recursive function for printing a positive integer */
+    function void printPositiveInt(int i) {
+      var int div, rem;
+      let div = i/10;
+      let rem = i - ((i/10) * 10); // mod 10
+      if ((rem < 0) | (rem > 10)) {
+        do Sys.error(6);
+      }
+      if (~(div = 0)) {
+        do Output.printInt(div);
+      }
+      do Output.printChar(rem + 48);
       return;
     }
 
