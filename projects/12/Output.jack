@@ -212,41 +212,53 @@ class Output {
 
     /** Displays the given character at the cursor location,
      *  and advances the cursor one column forward. */
-    function void printChar(char c) {
+    function void printChar(char c){
+      do Output.printCharWithColor(c, true);
+      let cursorCol = cursorCol + 1;
+      return;
+    }
+
+
+
+    /** Prints a char in black if color is true, otherwise zero
+        (may be used for backspace). Does not advance cursor.
+    */
+    function void printCharWithColor(char c, boolean color) {
       var Array bitmap;
-      var int curScreenCol, curScreenRow, rowNum, rowBitmap, screenValue, memoryAddr;
+      var int rowNum, rowMask, screenValue, memoryAddr;
       let bitmap = Output.getMap(c);
-      
-      // calculate the current row and column
-      let curScreenCol = cursorCol * 8;
-      let curScreenRow = cursorRow * 11;
 
       // draw bitmap, line by line
       let rowNum = 0;
       while (rowNum < 11) {
-        let rowBitmap = bitmap[rowNum];
+        let rowMask = bitmap[rowNum];
+        // see start of file for explanation about screen-pixel mapping
         let memoryAddr = 16384 + (((cursorRow * 11) + rowNum) * 32)
                                + (cursorCol/2);
         let screenValue = Memory.peek(memoryAddr);
-        // determine which half of the word via cursorCol % 2
+
+        // valid bitmap rows only contain up to 8 bits, corresponding to the
+        // half of the first character. We'll need to shift the bitmap-row by 8
+        // bits to the right, if we're writing a character to the second half.
+        //
         // (second half iff cursorCol % 2 == 1 iff cursorCol & 1 = 1)
         if (cursorCol & 1) {
-          // second half (we right shift the bitmap 8 bits,
-          //              achievable by multiplicating by 2^8=256)
-          let screenValue = screenValue | (rowBitmap * 256);
+          let rowMask = rowMask * 256; // (right shift by 8 bits = multiply by 2^8)
+        }
+        // if we're writing a black character, we turn on the screen value's bits via
+        // the mask
+        if (color) {
+          let screenValue = screenValue | rowMask;
         } else {
-          // first half
-          let screenValue = screenValue | rowBitmap;
+          // otherwise, we turn them off
+          let screenValue = screenValue & (~rowMask);
         }
 
         do Memory.poke(memoryAddr, screenValue);
 
-        // advance the row
+        // advance to the next row
         let rowNum = rowNum + 1;
-        let curScreenRow = curScreenRow + 11;
       }
-      
-      let cursorCol = cursorCol + 1;
       return;
     }
 
@@ -300,8 +312,9 @@ class Output {
 
     /** Moves the cursor one column back. */
     function void backSpace() {
-      // TODO should it remove the previously drawn character?
       let cursorCol = cursorCol - 1;
+      // print's a white box to clear the deleted character
+      do Output.printCharWithColor(0, false);
       return;
     }
 }
