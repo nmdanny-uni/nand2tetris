@@ -213,6 +213,16 @@ class Output {
     /** Displays the given character at the cursor location,
      *  and advances the cursor one column forward. */
     function void printChar(char c){
+      // TODO: should I handle backspaces and newlines here?
+      if (c = String.backSpace()) {
+        do Output.backSpace();
+        return;
+      }
+      if (c = String.newLine()) {
+        do Output.println();
+        return;
+      }
+
       do Output.printCharWithColor(c, true);
       let cursorCol = cursorCol + 1;
       if (cursorCol = 64) {
