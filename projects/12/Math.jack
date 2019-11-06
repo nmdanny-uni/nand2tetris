@@ -45,19 +45,19 @@ class Math {
       return x;
     }
 
-    /** Returns the product of x and curApprox. 
+    /** Returns the product of x and y. 
      *  When a Jack compiler detects the multiplication operator '*' in the 
      *  program's code, it handles it by invoking this method. In other words,
-     *  the Jack expressions x*curApprox and multiply(x,curApprox) return the same value.
+     *  the Jack expressions x*y and multiply(x,y) return the same value.
      */
-    function int multiply(int x, int curApprox) {
+    function int multiply(int x, int y) {
       var int sum, shiftedProd, i;
       let sum = 0;
       let shiftedProd = x;
       let i = 0;
       while (i < 16) {
-        // if the i'th bit of curApprox is 1 == curApprox & powersOf2[i]
-        if (curApprox & (powersOf2[i])) {
+        // if the i'th bit of y is 1 == y & powersOf2[i]
+        if (y & (powersOf2[i])) {
           let sum = sum + shiftedProd;
         }
         let shiftedProd = shiftedProd + shiftedProd; 
@@ -65,42 +65,42 @@ class Math {
       }
       // do Output.printInt(x);
       // do Output.printString(" * ");
-      // do Output.printInt(curApprox);
+      // do Output.printInt(y);
       // do Output.printString(" = ");
       // do Output.printInt(sum);
       // do Output.println();
       return sum;
     }
 
-    /** Returns the integer part of x/curApprox.
+    /** Returns the integer part of x/y.
      *  When a Jack compiler detects the multiplication operator '/' in the 
      *  program's code, it handles it by invoking this method. In other words,
-     *  the Jack expressions x/curApprox and divide(x,curApprox) return the same value.
+     *  the Jack expressions x/y and divide(x,y) return the same value.
      */
-    function int divide(int x, int curApprox) {
+    function int divide(int x, int y) {
       var int res;
-      let res = Math.divide_abs(Math.abs(x), Math.abs(curApprox));
-      if (((x<0) & (curApprox > 0)) | ((x>0) & (curApprox < 0))) {
+      let res = Math.divide_abs(Math.abs(x), Math.abs(y));
+      if (((x<0) & (y > 0)) | ((x>0) & (y < 0))) {
         let res = -res;
       }
-      do Output.printInt(x);
-      do Output.printString(" / ");
-      do Output.printInt(curApprox);
-      do Output.printString(" = ");
-      do Output.printInt(res);
-      do Output.println();
+      // do Output.printInt(x);
+      // do Output.printString(" / ");
+      // do Output.printInt(y);
+      // do Output.printString(" = ");
+      // do Output.printInt(res);
+      // do Output.println();
       return res;
     }
 
     // helper function for division of non-negative integers
-    function int divide_abs(int x, int curApprox) {
+    function int divide_abs(int x, int y) {
       var int q;
-      if (curApprox > x) {
+      if (y > x) {
         return 0;
       }
-      let q = Math.divide_abs(x, curApprox + curApprox);
+      let q = Math.divide_abs(x, y + y);
       // TODO optimize the following product
-      if ((x - (2 * (q * curApprox))) < curApprox) {
+      if ((x - (2 * (q * y))) < y) {
         return q + q;
       } else {
         return (q + q) + 1;
@@ -110,29 +110,29 @@ class Math {
     /** Returns the integer part of the square root of x.
      */
     function int sqrt(int x) {
-      // curApprox is the current root approximation
-      var int curApprox, j;
+      // y is the current root approximation
+      var int y, j;
       var int nextApprox, nextApproxSquare;
-      let curApprox = 0;
+      let y = 0;
       let j = (16/2) - 1;
       while (j > (-1)) {
-        let nextApprox = curApprox + powersOf2[j];
+        let nextApprox = y + powersOf2[j];
         let nextApproxSquare = nextApprox * nextApprox;
         // special care for overflows: squaring of a positive number
         // should always be positive.
         // We express '<=' as 'not >'. We cannot transform A <= B to A < B+1,
         // because B+1 might overflow
         if ((~(nextApproxSquare > x)) & (nextApproxSquare > 0)) {
-          let curApprox = nextApprox;
+          let y = nextApprox;
         }
         let j = j - 1;
       }
-      do Output.printString("sqrt(");
-      do Output.printInt(x);
-      do Output.printString(") = ");
-      do Output.printInt(curApprox);
-      do Output.println();
-      return curApprox;
+      // do Output.printString("sqrt(");
+      // do Output.printInt(x);
+      // do Output.printString(") = ");
+      // do Output.printInt(y);
+      // do Output.println();
+      return y;
     }
 
     /** Returns the greater number. */
