@@ -18,9 +18,16 @@ class Output {
 
     // Character map for displaying characters
     static Array charMaps; 
+    
+    // Cursor's coordinates
+    static int cursorRow;
+    static int cursorCol;
 
     /** Initializes the screen, and locates the cursor at the screen's top-left. */
     function void init() {
+      do Output.initMap();
+      do Output.moveCursor(0, 0);
+      return;
     }
 
     // Initializes the character map array
@@ -173,31 +180,99 @@ class Output {
         return charMaps[c];
     }
 
+
+
+    /* Some insights about translation between character coordinates to
+       screen coordinates:
+       We have 256 rows and 512 columns of pixels, mapped to
+       23 lines of 64 characters each.
+       256/23 = 11 pixel height per character
+       512/64 = 8 pixel width per character
+
+       This means, that a single word in screen memory can contain the row of 2
+       characters. Writing a lone character involves manipulating half a word.
+
+       More specifically, pixel (col, row) maps to the col%16 bit in
+       RAM[16384 + row*32 + col/16], thus, a character bitmap line located at (col, row)
+       using the character's coordinates, maps to RAM[16384 + (row * 32 * 11)
+                                                            + ((col*8)/16)]
+                                                = RAM[16384 + (row * 32 * 11)
+                                                            + (col/2)]
+
+
+    */
+
     /** Moves the cursor to the j-th column of the i-th row,
      *  and erases the character displayed there. */
     function void moveCursor(int i, int j) {
+      let cursorRow = i;
+      let cursorCol = j;
+      return;
     }
 
     /** Displays the given character at the cursor location,
      *  and advances the cursor one column forward. */
     function void printChar(char c) {
+      var Array bitmap;
+      var int curScreenCol, curScreenRow, rowNum, rowBitmap, screenValue, memoryAddr;
+      let bitmap = Output.getMap(c);
+      
+      // calculate the current row and column
+      let curScreenCol = cursorCol * 8;
+      let curScreenRow = cursorRow * 11;
+
+      // draw bitmap, line by line
+      let rowNum = 0;
+      while (rowNum < 11) {
+        let rowBitmap = bitmap[rowNum];
+        let memoryAddr = 16384 + (((cursorRow * 11) + rowNum) * 32)
+                               + (cursorCol/2);
+        let screenValue = Memory.peek(memoryAddr);
+        // determine which half of the word via cursorCol % 2
+        if (cursorCol & 1) {
+          // second half (we right shift the bitmap 8 bits,
+          //              achievable by multiplicating by 2^8=256)
+          let screenValue = screenValue | (rowBitmap * 256);
+        } else {
+          // first half
+          let screenValue = screenValue | rowBitmap;
+        }
+
+        do Memory.poke(memoryAddr, screenValue);
+
+        // advance the row
+        let rowNum = rowNum + 1;
+        let curScreenRow = curScreenRow + 11;
+      }
+      
+      let cursorCol = cursorCol + 1;
+      return;
     }
 
     /** displays the given string starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printString(String s) {
+      return;
     }
 
     /** Displays the given integer starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printInt(int i) {
+      return;
     }
 
     /** Advances the cursor to the beginning of the next line. */
     function void println() {
+      let cursorRow = cursorRow + 1;
+      let cursorCol = 0;
+      // TODO what to do if reached bottom
+      return;
     }
 
     /** Moves the cursor one column back. */
     function void backSpace() {
+      // TODO should it remove the previously drawn character?
+      let cursorCol = cursorCol - 1;
+      return;
     }
 }
