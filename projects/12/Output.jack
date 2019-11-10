@@ -305,9 +305,6 @@ class Output {
       var int div, rem;
       let div = i/10;
       let rem = i - ((i/10) * 10); // mod 10
-      if ((rem < 0) | (rem > 10)) {
-        do Sys.error(6);
-      }
       if (~(div = 0)) {
         do Output.printInt(div);
       }
