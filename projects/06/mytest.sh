@@ -20,6 +20,8 @@ do
 	then
 		RC=1
 		echo "The expected and gotten machine-code for $i don't match"
+	else
+		echo "The test for $name succeeded"
 	fi
 done;
 rm -rf $WORK_DIR

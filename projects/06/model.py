@@ -77,7 +77,6 @@ class ExtendedALUFlags(HackIntFlag):
     """ A 2-wide bitfield allowing to differ whether we are using the normal ALU
         (as defined in the book), or a mult/shift extension(as defined in moodle)
         This represents the bits at instruction[13..14]
-        TODO check if relevant for 2019-2020 course
     """
     Normal = 0b11,  # Normal ALU mode,
     Mult = 0b10,    # multiplication (not implemented, only added for clarification)
