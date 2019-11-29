@@ -12,6 +12,7 @@ def main():
         'input',
         help='A .vm file, or a directory with .vm files')
 
+    # this determines if this is ex7(no boostrap, default) or ex8(with bootstrap)
     argparser.add_argument('-b', '--bootstrap', action='store_true',
                            help='include bootstrap code')
 
