@@ -64,6 +64,23 @@ up logging depending on the passed in flags.
 
 Remarks & Implementation notes
 -------
+
+- Overflow handling in comparison operations:
+  Overflow can affect the results when performing GT/LT operations between
+  numbers of different sign, so I've solved this by splitting into cases - comparing
+  signs. Unfortunately, this resulted in a much longer output due to having 4 different branches
+  (4 different sign combinations).
+
+  If we had an overflow flag in the hardware/assembly, we could've used a much shorter version
+  (see __to_asm_eq, which can theoretically support LT/GT ops when there's no overflow in the subtraction)
+
+  There is a possible optimization regarding the size of the ASM: using a shared ASM code for LT/GT ops in the
+  file, jumping to it whenever we need to use such an op, and finally jumping back to our code. (this is achievable by
+  storing the return label in the stack or in R13)
+
+  I didn't implement this due to time constraints, and because this is very similar to implementing function calls in
+  Jack which we'll implement later.
+
 - Both ex7 and ex8 are implemented with the same project. The main difference is
   generation of bootstrap code, which may be enabled via the -b flag. Thus, the
   executable 'VMtranslator' may or may not pass this flag, depending if this is

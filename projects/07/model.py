@@ -223,6 +223,7 @@ class CompareType(Enum):
         return "JGT"  # x>y iff D>0
 
 
+
 class CompareCommand(Command):
     """ An equal/greater/less than command, depending on the passed
         compare_type """
@@ -234,8 +235,119 @@ class CompareCommand(Command):
         self.__name = name
         self.__compare_type = compare_type
 
+    # some insights about comparison:
+    # when comparing(via subtraction) numbers with the same sign, overflow is impossible
+    # when comparing for equality, overflow doesn't matter
+    # when comparing numbers with different sign, we can tell the result based on signs:
+    #   if x>0 and y<0:  x > y (push true, -1, if GT, otherwise 0)
+    #   if x<0 and y>0:  y > x (push false, 0, if GT, otherwise -1)
+
     def to_asm(self) -> str:
         CompareCommand.Counter += 1
+
+        # optimization: when performing equality, use the much shorter version
+        # that doesn't use 4 different branches
+        if self.__compare_type is CompareType.EQ:
+            return self.__to_asm_eq()
+
+        ret_val_x_gt_y = "-1" if self.__compare_type is CompareType.GT else "0"
+        ret_val_y_gt_x = "-1" if self.__compare_type is CompareType.LT else "0"
+
+        label_x_gt_0 = f"IF_X_GT_0_{CompareCommand.Counter}"
+        label_x_gt_y = f"IF_X_GT_Y_{CompareCommand.Counter}"
+        label_y_gt_x = f"IF_Y_GT_X_{CompareCommand.Counter}"
+        label_cmp_via_subtract = f"COMPARE_BY_SUBTRACTION_{CompareCommand.Counter}"
+
+        # when we need to push 'True' to the stack, this isn't a new label - we can re-use one of the previous branches
+        # (we know they're guaranteed to push 'True' or 'False' depending on CompareType)
+        label_cmp_success = label_x_gt_y if self.__compare_type is CompareType.GT else label_y_gt_x
+        # likewise for 'False'
+        label_cmp_fail = label_y_gt_x if self.__compare_type is CompareType.GT else label_x_gt_y
+
+        continue_label = f"CONTINUE_AFTER_CMP_{CompareCommand.Counter}"
+
+        return f"""// {self.__name}
+        // first, loading x and y into r14, r15 respectively
+        @SP
+        AM = M - 1
+        D = M
+        @R15
+        M = D // R15 = y
+        @SP
+        A = M - 1
+        D = M
+        @R14
+        M = D // R14 = x
+        // now, SP points one past 'x', we didn't decrement it, so we can simply replace 'x' with the comparison result
+
+
+        // now, checking for edge cases(4 possibilities involving x,y opposite signs)
+
+        @{label_x_gt_0}
+        D; JGT
+
+        // -----------------------------------------------------
+        // we are now on branch where x <= 0, checking for y > 0
+        @R15
+        D = M
+        // if y > 0, then y > 0 >= x, transitively, y > x
+        @{label_y_gt_x}
+        D; JGT
+
+        // ---------------------------------------------------
+        // we are on branch where x <=0 and y <= 0, using classic subtraction
+        
+        @{label_cmp_via_subtract}
+        0; JMP
+
+        // ---------------------------------------------------
+        ({label_x_gt_0})
+        // we are on branch where x > 0, checking for y <= 0
+        @R15
+        D = M
+        // if y <= 0, then y <= 0 < x, transitively, x > y
+        @{label_x_gt_y}
+        D; JLE
+
+        // ----------------------------------------------------
+        // we are on branch where x > 0 and y  > 0, using classic subtraction
+        ({label_cmp_via_subtract})
+        
+        @R15
+        D = M
+        @R14
+        D = M - D // D = x - y
+        
+        // comparison success if either (x - y > 0) or (x - y < 0) depending on the type of the command
+        // corresponding to (x > y) or (y > x) respectively.
+        @{label_cmp_success}
+        D; {self.__compare_type.to_asm()}
+
+        // comparison failed
+        @{label_cmp_fail}
+        0; JMP
+        
+        // ------------- setting results and continuing ---------------------
+        // note how we don't increment SP, since we're replacing the 'x' that was before it
+        ({label_x_gt_y})
+        @SP
+        A = M - 1
+        M = {ret_val_x_gt_y}
+        @{continue_label}
+        0; JMP
+
+        ({label_y_gt_x})
+        @SP
+        A = M - 1
+        M = {ret_val_y_gt_x}
+        @{continue_label}
+        0; JMP
+
+        ({continue_label})
+        """
+
+    # ASM code for an 'Eq' operation. This originally served as LT/GT too, but did't handle overflow well.
+    def __to_asm_eq(self) -> str:
 
         return f"""// {self.__name}
         @SP
