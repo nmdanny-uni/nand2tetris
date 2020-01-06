@@ -69,12 +69,6 @@ class Math {
         let shiftedProd = shiftedProd + shiftedProd; 
         let i = i + 1;
       }
-      // do Output.printInt(x);
-      // do Output.printString(" * ");
-      // do Output.printInt(y);
-      // do Output.printString(" = ");
-      // do Output.printInt(sum);
-      // do Output.println();
       return sum;
     }
 
@@ -90,12 +84,6 @@ class Math {
       if (((x<0) & (y > 0)) | ((x>0) & (y < 0))) {
         let res = -res;
       }
-      // do Output.printInt(x);
-      // do Output.printString(" / ");
-      // do Output.printInt(y);
-      // do Output.printString(" = ");
-      // do Output.printInt(res);
-      // do Output.println();
       return res;
     }
 
@@ -149,11 +137,6 @@ class Math {
         }
         let j = j - 1;
       }
-      // do Output.printString("sqrt(");
-      // do Output.printInt(x);
-      // do Output.printString(") = ");
-      // do Output.printInt(y);
-      // do Output.println();
       return y;
     }
 
