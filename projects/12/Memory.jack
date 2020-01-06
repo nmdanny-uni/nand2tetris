@@ -90,15 +90,13 @@ class Memory {
       let segment = pos;
       let segment[0] = null;
       let segment[1] = size;
-      // for debugging, mark the segment's block contents
-      // TODO delete this 
-      // TODO this might be necessary, follow https://moodle2.cs.huji.ac.il/nu19/mod/forum/discuss.php?d=15244
-      let ix = 0;
-      while (ix < size) {
-        //let segment[2 + ix] = 1337 + debugSegmentCount;
-	let segment[2 + ix] = 0; 
-        let ix = ix + 1;
-      }
+      /* // for debugging, mark the segment's block contents */
+      /* let ix = 0; */
+      /* while (ix < size) { */
+      /*   //let segment[2 + ix] = 1337 + debugSegmentCount; */
+      /*   let segment[2 + ix] = 0;  */
+      /*   let ix = ix + 1; */
+      /* } */
       let debugSegmentCount = debugSegmentCount + 1;
       return segment;
     }
