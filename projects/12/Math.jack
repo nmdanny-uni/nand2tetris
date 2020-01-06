@@ -13,6 +13,12 @@ class Math {
   // 2^x == 1 << x == powersOf2[x]
   static Array powersOf2;
 
+    // the value 2*q*y that is recursively calculated when performing positive division x/y
+    // (where q is x/2y)
+    // conceptually it can be thought as an additional return value from divideAbs
+    // (we don't have tuples/pointers so I use a static variable)
+    static int qyqy;
+
     /** Initializes the library. */
     function void init() {
       let powersOf2 = Array.new(16);
@@ -77,9 +83,10 @@ class Math {
      *  program's code, it handles it by invoking this method. In other words,
      *  the Jack expressions x/y and divide(x,y) return the same value.
      */
+
     function int divide(int x, int y) {
       var int res;
-      let res = Math.divide_abs(Math.abs(x), Math.abs(y));
+      let res = Math.divideAbs(Math.abs(x), Math.abs(y));
       if (((x<0) & (y > 0)) | ((x>0) & (y < 0))) {
         let res = -res;
       }
@@ -93,16 +100,29 @@ class Math {
     }
 
     // helper function for division of non-negative integers
-    function int divide_abs(int x, int y) {
-      var int q;
+    function int divideAbs(int x, int y) {
+      var int q; // quotinent of x and y+y
       if (y > x) {
+        // if y > x, then of course that x/y < 1 and in particular
+        // 2x/2y < 1, thus 2x/2y = qyqy = 0
+        let qyqy = 0;
         return 0;
       }
-      let q = Math.divide_abs(x, y + y);
-      // TODO optimize the following product
-      if ((x - (2 * (q * y))) < y) {
+      let q = Math.divideAbs(x, y + y);
+      // now, qyqy stores 2*q*y
+      if ((x - qyqy) < y) {
+        // we want to calculate 2*nextQ*nextY
+        // knowing: nextY = y/2
+        //          nextQ = 2q   (because )
+        // thus, 2*nextQ*nextY = 2*2q * y/2 = 2*q*y = qyqy
+        // therefore it is unchanged
         return q + q;
       } else {
+        // knowing: nextY = y/2
+        //          nextQ = 2q+1
+        // thus, 2*nextQ*nextY = 2*(2q+1) * y/2 = 2q*y + y = qyqy + y
+        // thus, we'll add 'y' to qyqy.
+        let qyqy = qyqy + y;
         return (q + q) + 1;
       }
     }
