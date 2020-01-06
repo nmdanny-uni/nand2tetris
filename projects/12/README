@@ -1,0 +1,32 @@
+danielkerbel
+===============================================================================
+Daniel Kerbel, ID ***REMOVED***, daniel.kerbel@mail.huji.ac.il
+===============================================================================
+
+                           Projects 12 - Jack OS
+                           ----------------------- 
+  
+
+Submitted Files
+.
+|-- README
+|-- Array.jack
+|-- Keyboard.jack
+|-- Math.jack
+|-- Memory.jack
+|-- Output.jack
+|-- Screen.jack
+|-- String.jack
+`-- Sys.jack
+
+
+Remarks & Implementation notes
+-------
+Most of the functionality was implemented as described in the book/videos.
+See comments in files for explanation about trickier parts(e.g bitwise
+operations, segment structure) and optimizations.
+
+Some notable optimizations included:
+- Math.jack: Division doesn't use multiplication
+- Screen.jack: Drawing horizontal lines is done in chunks except for the
+  beginning/end, drawPixel doesn't use multiplication
