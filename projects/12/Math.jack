@@ -102,7 +102,9 @@ class Math {
     // helper function for division of non-negative integers
     function int divideAbs(int x, int y) {
       var int q; // quotinent of x and y+y
-      if (y > x) {
+      // the check for y<0 is needed since one of the recursive calls may overflow
+      // even though the initial y is positive.
+      if ((y > x) | (y < 0)) {
         // if y > x, then of course that x/y < 1 and in particular
         // 2x/2y < 1, thus 2x/2y = qyqy = 0
         let qyqy = 0;
