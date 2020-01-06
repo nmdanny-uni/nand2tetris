@@ -56,10 +56,30 @@ class Screen {
       return;
     }
 
+
+    /**
+     *  Given a (x,y) coordinate, calculates its offset in the screen mapping
+     *  relative to screen base(16384)
+     */
+    function int calculateOffset(int x, int y) {
+      // offset = (32*y) + (x/16)
+      // we can simplify multiplication to addition as follows:
+      // 32*y = y * 2^5 = y*2 * 2 * 2 * 2 * 2
+      // and each y*2 is simplified to y+y
+      let y = y + y;
+      let y = y + y;
+      let y = y + y;
+      let y = y + y;
+      let y = y + y;
+      // as for divsion, we'll rely on our built in implementation which already
+      // avoids multiplication
+      return y + (x/16);
+    }
+
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
       var int offset, value, bitIx;
-      let offset = (32 * y) + (x / 16);
+      let offset = Screen.calculateOffset(x,y);
       let value = Memory.peek(16384 + offset);
       // modify the c%16 bit, we know that a % 2^4 == a && (powersOf2[4] - 1)
       let bitIx = x & 15;
