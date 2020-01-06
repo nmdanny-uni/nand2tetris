@@ -18,10 +18,14 @@ class Screen {
   // true for black, false for white
   static boolean currentColor;
 
+  // Base address of screen memory map as per the Hack standard mapping
+  static Array screenBase;
+
 
     /** Initializes the Screen. */
     function void init() {
       let currentColor = true;
+      let screenBase = 16384;
       let powersOf2 = Array.new(16);
       let powersOf2[0] = 1;
       let powersOf2[1] = 2;
@@ -38,14 +42,17 @@ class Screen {
       let powersOf2[12] = 4096;
       let powersOf2[13] = 8192;
       let powersOf2[14] = 16384;
-      // the following obviously isn't correct, but it's good enough for
-      // purposes of bitwise operations.
       let powersOf2[15] = -32767 - 1;
       return;
     }
 
     /** Erases the entire screen. */
     function void clearScreen() {
+      var boolean prevColor;
+      let prevColor = currentColor;
+      let currentColor = false;
+      do Screen.drawRectangle(0,0, 511, 255);
+      let currentColor = prevColor;
       return;
     }
 
@@ -80,7 +87,7 @@ class Screen {
     function void drawPixel(int x, int y) {
       var int offset, value, bitIx;
       let offset = Screen.calculateOffset(x,y);
-      let value = Memory.peek(16384 + offset);
+      let value = screenBase[offset];
       // modify the c%16 bit, we know that a % 2^4 == a && (powersOf2[4] - 1)
       let bitIx = x & 15;
       // if color is true: we should set the bit via `value | (1 << bitIx)`
@@ -90,8 +97,7 @@ class Screen {
       } else {
         let value = value & (~powersOf2[bitIx]);
       }
-
-      do Memory.poke(16384 + offset, value);
+      let screenBase[offset] = value;
       return;
     }
 
@@ -197,16 +203,44 @@ class Screen {
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
       var int curX, curY;
-      let curX = x1;
+      let curY = y1;
       // we use non-strict inequalities so that we'll be able to
       // draw vertical/horizontal lines as well
+      while (~(curY > y2)) {
+        do Screen.drawHorizontalLine(curY, x1, x2);
+        let curY = curY + 1;
+      }
+      return;
+    }
+
+
+    /** Draws a line from (x1,y) to (x2,y). */
+    function void drawHorizontalLine(int y, int x1, int x2) {
+      var int curX, offset, chunkValue;
+      let curX = x1;
+      let offset = Screen.calculateOffset(x1, y);
+
+      let chunkValue = 0;
+      // if black, use -1 (11...11) as the chunk value, otherwise, use 0 (00...00)
+      if (currentColor) {
+        let chunkValue = -1;
+      }
+
       while (~(curX > x2)) {
-        let curY = y1;
-        while (~(curY > y2)) {
-          do Screen.drawPixel(curX, curY);
-          let curY = curY + 1;
+        if (((curX & 15) = 0) & ((curX + 16) < x2)) {
+          // try drawing in 16-pixel chunks if possible
+          let screenBase[offset] = chunkValue;
+          let curX = curX + 16;
+          let offset = offset + 1;
+        } else {
+          // otherwise, use drawPixel which is less efficient(it will called no more than 15*2 times,
+          // for both edges of the line, at worst case)
+          do Screen.drawPixel(curX, y);
+          let curX = curX + 1;
+          if ((curX & 15) = 0) {
+            let offset = offset + 1;
+          }
         }
-        let curX = curX + 1;
       }
       return;
     }
