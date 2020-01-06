@@ -207,6 +207,7 @@ class Output {
     function void moveCursor(int i, int j) {
       let cursorRow = i;
       let cursorCol = j;
+      do Output.printCharWithColor(0, false);
       return;
     }
 
@@ -233,7 +234,7 @@ class Output {
 
 
 
-    /** Prints a char in black if color is true, otherwise zero
+    /** Prints a char in black if color is true, otherwise white
         (may be used for backspace). Does not advance cursor.
     */
     function void printCharWithColor(char c, boolean color) {
@@ -325,7 +326,7 @@ class Output {
     /** Moves the cursor one column back. */
     function void backSpace() {
       let cursorCol = cursorCol - 1;
-      // print's a white box to clear the deleted character
+      // prints a white box to clear the deleted character
       do Output.printCharWithColor(0, false);
       return;
     }
