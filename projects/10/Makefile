@@ -3,7 +3,7 @@
 # Makefile for Jack analyzer & compiler, exercises 10 and 11
 #
 # Students:
-# Daniel Kerbel, ID ***REMOVED***, daniel.kerbel@mail.huji.ac.il
+# Daniel Kerbel, ID DELETED, daniel.kerbel@mail.huji.ac.il
 #
 ###############################################################################
 

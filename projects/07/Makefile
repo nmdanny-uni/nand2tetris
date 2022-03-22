@@ -3,7 +3,7 @@
 # Makefile for VM translator, project 7
 #
 # Students:
-# Daniel Kerbel, ID ***REMOVED***, daniel.kerbel@mail.huji.ac.il
+# Daniel Kerbel, ID DELETED, daniel.kerbel@mail.huji.ac.il
 #
 ###############################################################################
 

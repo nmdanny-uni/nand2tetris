@@ -3,7 +3,7 @@
 # Makefile for Assembler, project 6
 #
 # Students:
-# Daniel Kerbel, ID ***REMOVED***, daniel.kerbel@mail.huji.ac.il
+# Daniel Kerbel, ID DELETED, daniel.kerbel@mail.huji.ac.il
 #
 ###############################################################################
 
